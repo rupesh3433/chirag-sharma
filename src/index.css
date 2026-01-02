@@ -1,0 +1,193 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 350 100% 98%;
+    --foreground: 240 5.9% 20%;  /* Darker text for better contrast */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 350 100% 90%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 30 100% 82%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 40%;  /* Darker for better contrast */
+
+    --accent: 260 100% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 350 100% 90%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 240 10% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 240 10% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 240 10% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 350 80% 85%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 30 80% 70%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 240 5% 20%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 260 60% 30%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 5% 26%;
+    --input: 240 5% 26%;
+    --ring: 350 80% 85%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+
+  h1, h2, h3, h4, h5 {
+    @apply font-playfair;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container px-4 md:px-8 lg:px-12 mx-auto;
+  }
+
+  .header-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-chirag-darkPurple to-chirag-purple;
+  }
+
+  .button-primary {
+    @apply bg-chirag-pink hover:bg-chirag-peach text-chirag-darkPurple font-medium py-3 px-8 rounded-full transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+
+  .button-secondary {
+    @apply bg-transparent border-2 border-chirag-pink hover:bg-chirag-pink text-chirag-darkPurple font-medium py-2.5 px-7 rounded-full transition-all duration-300;
+  }
+
+  .service-card {
+    @apply bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-chirag-pink/20;
+  }
+
+  .testimonial-card {
+    @apply bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-chirag-peach/30;
+  }
+  
+  .portfolio-item {
+    @apply relative overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300;
+  }
+  
+  .curved-divider {
+    @apply relative h-24 overflow-hidden;
+  }
+  
+  .curved-divider::before {
+    content: '';
+    @apply absolute w-[200%] h-[200%] left-[-50%] top-0 rounded-[50%] bg-background;
+  }
+  
+  .form-input {
+    @apply w-full p-3 border border-chirag-pink/30 rounded-lg focus:ring-2 focus:ring-chirag-pink focus:border-transparent transition-all duration-300;
+  }
+
+  /* New animations and effects */
+  .animate-image-glow {
+    animation: image-glow 4s ease-in-out infinite;
+  }
+
+  .bg-pink-to-peach {
+    @apply bg-gradient-to-r from-chirag-purple to-chirag-darkPurple;
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1;
+  }
+}
+
+@keyframes image-glow {
+  0% {
+    box-shadow: 0 0 15px 0px rgba(255, 222, 226, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px 5px rgba(253, 225, 211, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 15px 0px rgba(255, 222, 226, 0.4);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Add more accessibility for text readability */
+.text-enhanced-contrast {
+  @apply text-chirag-darkPurple;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Background with text overlay for better readability */
+.readable-text-overlay {
+  position: relative;
+}
+
+.readable-text-overlay::before {
+  content: '';
+  @apply absolute inset-0 bg-white/80 backdrop-blur-sm;
+  z-index: -1;
+}
