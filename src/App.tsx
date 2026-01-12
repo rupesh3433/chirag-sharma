@@ -9,34 +9,44 @@ import About from "./pages/About";
 import Portfolio from "./pages/Portfolio";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
+import Book from "./pages/Book"; // ✅ ADD BOOK PAGE
 import NotFound from "./pages/NotFound";
 
-// ✅ IMPORT CHATBOT
+// ✅ GLOBAL CHATBOT
 import Chatbot from "@/components/chatbot/Chatbot";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
 
-      <BrowserRouter>
-        {/* ✅ CHATBOT IS GLOBAL */}
-        <Chatbot />
+        <BrowserRouter>
+          {/* ✅ CHATBOT IS GLOBAL */}
+          <Chatbot />
 
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/services" element={<Services />} />
+
+            {/* ✅ BOOKING ROUTE */}
+            <Route path="/book" element={<Book />} />
+
+            {/* Existing contact page (email form) */}
+            <Route path="/contact" element={<Contact />} />
+
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
