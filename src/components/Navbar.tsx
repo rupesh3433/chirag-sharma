@@ -58,13 +58,28 @@ const Navbar = () => {
 
         {/* Social Icons - Desktop */}
         <div className="hidden md:flex items-center space-x-4 ml-4 text-chirag-darkPurple">
-          <a href="https://instagram.com" target="_blank" rel="noreferrer" className="social-icon">
+          <a
+            href="https://www.instagram.com/_jinniechiragmua/"
+            target="_blank"
+            rel="noreferrer"
+            className="social-icon hover:text-chirag-pink transition-colors"
+          >
             <FaInstagram size={18} />
           </a>
-          <a href="https://facebook.com" target="_blank" rel="noreferrer" className="social-icon">
+          <a
+            href="https://www.facebook.com/chirag.sharma.5477272/"
+            target="_blank"
+            rel="noreferrer"
+            className="social-icon hover:text-chirag-pink transition-colors"
+          >
             <FaFacebookF size={18} />
           </a>
-          <a href="https://youtube.com" target="_blank" rel="noreferrer" className="social-icon">
+          <a
+            href="https://www.youtube.com/@jinniechiragmua"
+            target="_blank"
+            rel="noreferrer"
+            className="social-icon hover:text-chirag-pink transition-colors"
+          >
             <FaYoutube size={18} />
           </a>
         </div>
@@ -100,11 +115,32 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Social */}
-          <div className="flex items-center space-x-5 mt-6 text-chirag-darkPurple">
-            <FaInstagram size={18} />
-            <FaFacebookF size={18} />
-            <FaYoutube size={18} />
+          {/* Mobile Social Icons */}
+          <div className="flex items-center space-x-6 mt-6 text-chirag-darkPurple">
+            <a
+              href="https://www.instagram.com/_jinniechiragmua/"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-chirag-pink"
+            >
+              <FaInstagram size={18} />
+            </a>
+            <a
+              href="https://www.facebook.com/chirag.sharma.5477272/"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-chirag-pink"
+            >
+              <FaFacebookF size={18} />
+            </a>
+            <a
+              href="https://www.youtube.com/@jinniechiragmua"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-chirag-pink"
+            >
+              <FaYoutube size={18} />
+            </a>
           </div>
         </div>
       )}
