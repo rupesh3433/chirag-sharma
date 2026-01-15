@@ -57,7 +57,7 @@ const Hero = () => {
             <div className="relative">
               <div className="absolute -inset-4 rounded-full  from-chirag-pink to-chirag-peach opacity-100 blur-lg animate-pulse"></div>
               <img 
-                src="/lovable-uploads/454407527_852067043529780_6854912164227611155_n.jpg" 
+                src="/photos/chiragicon.jpg" 
                 alt="Chirag Sharma - Makeup Artist" 
                 className="w-full  rounded-full shadow-xl animate-image-glow object-cover aspect-square" 
               />
