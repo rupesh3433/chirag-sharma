@@ -68,9 +68,6 @@ const Book = (): JSX.Element => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  /* -------------------- */
-  /* Handlers */
-  /* -------------------- */
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -107,8 +104,6 @@ const Book = (): JSX.Element => {
 
       setShowOtpModal(false);
       setShowSuccess(true);
-
-      // ✅ CLEAR FORM VISUALLY + STATE
       setFormData(emptyForm);
       setOtp("");
       setBookingId("");
@@ -125,18 +120,15 @@ const Book = (): JSX.Element => {
 
       <section className="pt-28 pb-10">
         <div className="container-custom max-w-4xl">
-
           {showSuccess && (
-            <div className="mb-6 rounded-xl bg-green-100 border border-green-300 px-6 py-4 text-green-800 text-center font-medium transition-all duration-300">
+            <div className="mb-6 rounded-xl bg-green-100 border border-green-300 px-6 py-4 text-green-800 text-center font-medium">
               🎉 Your booking request has been sent successfully!
             </div>
           )}
 
           <form
             onSubmit={handleSubmit}
-            className={`bg-white p-10 rounded-3xl shadow-xl space-y-8 transition-all duration-300 ${
-              showSuccess ? "mt-4" : "mt-0"
-            }`}
+            className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl space-y-8"
           >
             {/* Service */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -162,26 +154,30 @@ const Book = (): JSX.Element => {
               <InputField label="Email" name="email" value={formData.email} type="email" icon={<Mail size={16} />} onChange={handleChange} />
             </div>
 
-            {/* Phone */}
+            {/* Phone — FIXED */}
             <div>
               <label className="text-sm">Phone Number</label>
-              <div className="flex">
+
+              <div className="grid grid-cols-[110px_1fr] gap-2 w-full">
                 <select
-                  className="border rounded-l-xl px-3"
+                  className="w-full min-w-0 border rounded-xl px-2 py-2 text-sm truncate appearance-none bg-white"
                   value={formData.phone_country}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, phone_country: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      phone_country: e.target.value,
+                    }))
                   }
                 >
                   {Object.keys(COUNTRY_CODES).map((c) => (
                     <option key={c} value={c}>
-                      {COUNTRY_CODES[c]} ({c})
+                      {COUNTRY_CODES[c]}
                     </option>
                   ))}
                 </select>
 
                 <input
-                  className="flex-1 border rounded-r-xl px-4 py-2"
+                  className="w-full min-w-0 border rounded-xl px-4 py-2"
                   placeholder="Enter phone number"
                   value={formData.phone_number}
                   onChange={(e) =>
