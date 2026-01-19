@@ -1,150 +1,99 @@
-import React, { useEffect } from "react";
+import React from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Check, Award, Star, BadgeCheck } from "lucide-react";
+import { Check, BadgeCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const servicesData = [
+const servicesSections = [
   {
-    id: 1,
-    title: "Bridal Makeup",
-    description:
-      "Make your special day unforgettable with our premium bridal makeup services. We create flawless, long-lasting looks that highlight your natural beauty and complement your wedding aesthetic.",
-    image:
-      "https://images.unsplash.com/photo-1594489573233-c2d4e4e5f106?auto=format&fit=crop&q=80&w=2000",
+    title: "Bridal Makeup Services",
+    images: ["/photos/chirag1.PNG", "/photos/chirag2.PNG"],
     packages: [
       {
-        name: "Classic Bridal",
-        price: "₹8,000",
-        popular: false,
+        name: "Chirag's Signature Bridal Makeup",
+        price: "₹99,999",
+        popular: true,
         features: [
-          "Personalized consultation",
-          "Bridal makeup application",
-          "Premium quality products",
-          "Consultation and trial session",
-          "Lashes included",
-          "Touch-up kit",
+          "Signature bridal look by Chirag Sharma",
+          "Premium international products",
+          "Fully customized luxury finish",
+          "Excluding travel & accommodation",
         ],
       },
       {
-        name: "Premium Bridal",
-        price: "₹15,000",
-        popular: true,
+        name: "Luxury Bridal Makeup (HD / Brush)",
+        price: "₹79,999",
+        popular: false,
         features: [
-          "In-depth beauty consultation",
-          "Luxury bridal makeup application",
-          "High-end, long-lasting products",
-          "Deluxe trial session",
-          "Premium lashes and hair styling",
-          "Comprehensive touch-up kit",
-          "On-site assistant for 4 hours",
+          "HD / Brush technique",
+          "Flawless, photo-ready finish",
+          "Luxury bridal look",
+          "Excluding travel & accommodation",
+        ],
+      },
+      {
+        name: "Reception / Engagement / Cocktail Makeup",
+        price: "₹59,999",
+        popular: false,
+        features: [
+          "Glam makeup for wedding events",
+          "Customized to outfit & occasion",
+          "Premium products",
+          "Excluding travel & accommodation",
         ],
       },
     ],
   },
   {
-    id: 2,
-    title: "Party Makeup",
-    description:
-      "Stand out at any event with our stunning party makeup services.",
-    image:
-      "https://images.unsplash.com/photo-1588731247530-4076fc99173e?auto=format&fit=crop&q=80&w=2000",
+    title: "Party Makeup Services",
+    images: ["/photos/chirag4.PNG"],
     packages: [
       {
-        name: "Classic Glam",
-        price: "₹3,000",
-        popular: false,
+        name: "Party Makeup – By Chirag Sharma",
+        price: "₹19,999",
+        popular: true,
         features: [
-          "Personalized look creation",
-          "Party makeup application",
-          "Quality products",
-          "Lashes included",
-          "1 hour service",
+          "Party makeup by Chirag Sharma",
+          "Premium products",
+          "Luxury glam finish",
+          "Excluding travel & accommodation",
         ],
       },
       {
-        name: "Premium Glam",
-        price: "₹5,000",
-        popular: true,
+        name: "Party Makeup – By Senior Artist",
+        price: "₹6,999",
+        popular: false,
         features: [
-          "Customized beauty consultation",
-          "High-end party makeup application",
-          "Premium products and lashes",
-          "Hair styling included",
-          "Touch-up tips and techniques",
-          "1.5 hour service",
+          "Party makeup by senior artist",
+          "Professional finish",
+          "Excluding travel & accommodation",
         ],
       },
     ],
   },
   {
-    id: 3,
-    title: "Editorial Makeup",
-    description:
-      "Create striking, photogenic looks perfect for photoshoots.",
-    image:
-      "https://images.unsplash.com/photo-1542145748-72b2eb8576cd?auto=format&fit=crop&q=80&w=2000",
+    title: "Henna (Mehendi) Services",
+    images: ["/photos/chirag5.PNG"],
     packages: [
       {
-        name: "Standard Editorial",
-        price: "₹7,000",
-        popular: false,
-        features: [
-          "Creative concept development",
-          "Editorial makeup application",
-          "Photography-ready finish",
-          "Basic touch-ups",
-          "2 hour service",
-        ],
-      },
-      {
-        name: "Avant-Garde Editorial",
-        price: "₹12,000",
+        name: "Henna – By Chirag Sharma",
+        price: "₹49,999",
         popular: true,
         features: [
-          "Comprehensive creative direction",
-          "Advanced editorial techniques",
-          "Special effects and embellishments",
-          "High-definition finish",
-          "Multiple look changes",
-          "Continuous touch-ups",
-          "3 hour service",
-        ],
-      },
-    ],
-  },
-  {
-    id: 4,
-    title: "Henna Art",
-    description:
-      "Add elegance and beauty with our intricate henna designs.",
-    image:
-      "https://images.unsplash.com/photo-1583266999030-4fba155cca8e?auto=format&fit=crop&q=80&w=2000",
-    packages: [
-      {
-        name: "Simple Henna",
-        price: "₹2,000",
-        popular: false,
-        features: [
-          "Custom design consultation",
-          "Simple pattern application",
-          "Natural henna paste",
-          "Aftercare instructions",
-          "1 hour service",
-        ],
-      },
-      {
-        name: "Bridal Henna",
-        price: "₹6,000",
-        popular: true,
-        features: [
-          "Extensive design consultation",
-          "Intricate designs on hands and feet",
+          "Intricate bridal henna designs",
           "Premium natural henna",
-          "Traditional and modern motifs",
-          "Aftercare kit provided",
-          "Free touch-ups",
-          "3+ hour service",
+          "Traditional & modern patterns",
+          "Excluding travel & accommodation",
+        ],
+      },
+      {
+        name: "Henna – By Senior Artist",
+        price: "₹19,999",
+        popular: false,
+        features: [
+          "Professional henna application",
+          "Traditional & modern designs",
+          "Excluding travel & accommodation",
         ],
       },
     ],
@@ -152,94 +101,136 @@ const servicesData = [
 ];
 
 const Services = () => {
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("animate-fade-in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document
-      .querySelectorAll(".service-animation")
-      .forEach((el) => observer.observe(el));
-  }, []);
-
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* NAVBAR */}
       <Navbar />
 
-      <section className="pt-32 pb-16 bg-gradient-to-b from-chirag-pink/10 to-white">
-        <div className="container-custom space-y-24">
-          {servicesData.map((service) => (
-            <div key={service.id} className="service-animation opacity-0">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <img
-                  src={service.image}
-                  alt={service.title}
-                  className="rounded-xl shadow-xl h-80 w-full object-cover"
-                />
+      {/* MAIN CONTENT */}
+      <main className="flex-grow">
+        {/* Hero Section */}
+        <section className="pt-32 pb-8 bg-gradient-to-br from-pink-50 via-white to-orange-50">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <div className="inline-block mb-1 px-4 py-2 bg-gradient-to-r from-pink-100 to-orange-100 rounded-full">
+              <span className="text-sm font-semibold text-pink-600">
+                Premium Services
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-900 via-pink-600 to-orange-500 bg-clip-text text-transparent">
+              Our Services
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover our range of luxury makeup and beauty services, crafted
+              to make you look and feel extraordinary.
+            </p>
+          </div>
+        </section>
 
-                <div>
-                  <h2 className="text-3xl font-bold mb-4 font-playfair">
-                    {service.title}
-                  </h2>
-                  <p className="text-gray-600 mb-6">
-                    {service.description}
-                  </p>
-
-                  {service.packages.map((pkg) => (
-                    <div
-                      key={pkg.name}
-                      className="relative bg-white p-6 mb-6 rounded-xl shadow-md border"
-                    >
-                      {pkg.popular && (
-                        <div className="absolute -top-3 right-4 bg-gradient-to-r from-chirag-pink to-chirag-peach text-black text-xs px-3 py-1 rounded-full flex items-center">
-                          <BadgeCheck size={14} className="mr-1" />
-                          Most Popular
-                        </div>
-                      )}
-
-                      <div className="flex justify-between mb-4">
-                        <h3 className="text-xl font-semibold">
-                          {pkg.name}
-                        </h3>
-                        <span className="font-bold text-chirag-darkPurple">
-                          {pkg.price}
-                        </span>
-                      </div>
-
-                      <ul className="space-y-2 mb-4">
-                        {pkg.features.map((f, i) => (
-                          <li key={i} className="flex items-start">
-                            <Check size={16} className="mr-2 text-chirag-pink" />
-                            {f}
-                          </li>
+        {/* Services Section */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 space-y-32">
+            {servicesSections.map((section, idx) => (
+              <div key={idx}>
+                <div
+                  className={`grid lg:grid-cols-2 gap-12 ${
+                    idx % 2 === 1 ? "lg:grid-flow-dense" : ""
+                  }`}
+                >
+                  {/* Image Column */}
+                  <div className={`${idx % 2 === 1 ? "lg:col-start-2" : ""}`}>
+                    {section.images.length === 2 ? (
+                      <div className="grid grid-rows-2 gap-4 translate-y-5">
+                        {section.images.map((img, imgIdx) => (
+                          <div
+                            key={imgIdx}
+                            className="relative overflow-hidden rounded-3xl shadow-2xl aspect-[9/8]"
+                          >
+                            <img
+                              src={img}
+                              alt={`${section.title} ${imgIdx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                         ))}
-                      </ul>
+                      </div>
+                    ) : (
+                      <div className="relative overflow-hidden rounded-3xl shadow-2xl aspect-[6/7] bg-white translate-y-6">
+                        <img
+                          src={section.images[0]}
+                          alt={section.title}
+                          className=" object-top rounded-2xl -translate-y-[10%]"
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                      <Link
-                        to={`/book?service=${encodeURIComponent(
-                          service.title
-                        )}&package=${encodeURIComponent(pkg.name)}`}
-                        className="button-primary w-full text-center inline-block"
-                      >
-                        Book Now
-                      </Link>
+                  {/* Content Column */}
+                  <div
+                    className={`${
+                      idx % 2 === 1 ? "lg:col-start-1 lg:row-start-1" : ""
+                    }`}
+                  >
+                    <h2 className="text-4xl font-bold mb-10 text-purple-900">
+                      {section.title}
+                    </h2>
+
+                    <div className="space-y-6">
+                      {section.packages.map((pkg) => (
+                        <div
+                          key={pkg.name}
+                          className="relative bg-white p-7 rounded-2xl shadow-lg border border-gray-200 hover:border-pink-300 transition-all"
+                        >
+                          {pkg.popular && (
+                            <span className="absolute -top-3 right-6 bg-gradient-to-r from-pink-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full flex items-center shadow-lg">
+                              <BadgeCheck size={14} className="mr-1.5" />
+                              Most Popular
+                            </span>
+                          )}
+
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-5 gap-2">
+                            <h3 className="text-xl font-bold text-gray-900">
+                              {pkg.name}
+                            </h3>
+                            <span className="text-2xl font-bold text-pink-600 whitespace-nowrap">
+                              {pkg.price}
+                            </span>
+                          </div>
+
+                          <ul className="space-y-3 mb-6">
+                            {pkg.features.map((f, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start text-gray-700"
+                              >
+                                <Check
+                                  size={16}
+                                  className="mr-2 text-pink-600 mt-1 flex-shrink-0"
+                                />
+                                <span>{f}</span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <Link
+                            to={`/book?service=${encodeURIComponent(
+                              section.title
+                            )}&package=${encodeURIComponent(pkg.name)}`}
+                            className="block w-full text-center bg-gradient-to-r from-purple-900 to-pink-600 hover:from-purple-800 hover:to-pink-500 text-white font-semibold py-3 rounded-xl transition-all"
+                          >
+                            Book Now
+                          </Link>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      </main>
 
+      {/* FOOTER */}
       <Footer />
     </div>
   );

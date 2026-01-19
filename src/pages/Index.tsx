@@ -4,8 +4,6 @@ import Hero from '../components/home/Hero';
 import Services from '../components/home/Services';
 import Testimonials from '../components/home/Testimonials';
 import Portfolio from '../components/home/Portfolio';
-import Newsletter from '../components/home/Newsletter';
-import FeaturedIn from '../components/home/FeaturedIn';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { ArrowUp } from 'lucide-react';
@@ -115,11 +113,9 @@ const Index = () => {
       
       <main className="animate-fade-in">
         <Hero />
-        <FeaturedIn />
         <Services />
         <Portfolio />
         <Testimonials />
-        <Newsletter />
       </main>
       
       <Footer />
