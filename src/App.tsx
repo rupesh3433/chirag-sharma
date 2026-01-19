@@ -9,7 +9,7 @@ import About from "./pages/About";
 import Portfolio from "./pages/Portfolio";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
-import Book from "./pages/Book"; // ✅ ADD BOOK PAGE
+import Book from "./pages/Book";
 import NotFound from "./pages/NotFound";
 
 // ✅ GLOBAL CHATBOT
