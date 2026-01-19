@@ -7,15 +7,36 @@ import { toast } from "sonner";
 import { Calendar, Mail, User, MapPin } from "lucide-react";
 
 /* -------------------- */
-/* Data */
+/* SERVICE NAME MAPPING */
 /* -------------------- */
-const SERVICES = {
-  "Bridal Makeup": ["Classic Bridal", "Premium Bridal"],
-  "Party Makeup": ["Classic Glam", "Premium Glam"],
-  "Editorial Makeup": ["Standard Editorial", "Avant-Garde Editorial"],
-  "Henna Art": ["Simple Henna", "Bridal Henna"],
+const SERVICE_NAME_MAP: Record<string, string> = {
+  "Bridal Makeup Services": "Bridal Makeup",
+  "Party Makeup Services": "Party Makeup",
+  "Henna (Mehendi) Services": "Henna Art",
 };
 
+/* -------------------- */
+/* SERVICES + PACKAGES  */
+/* -------------------- */
+const SERVICES = {
+  "Bridal Makeup": [
+    "Chirag's Signature Bridal Makeup",
+    "Luxury Bridal Makeup (HD / Brush)",
+    "Reception / Engagement / Cocktail Makeup",
+  ],
+  "Party Makeup": [
+    "Party Makeup – By Chirag Sharma",
+    "Party Makeup – By Senior Artist",
+  ],
+  "Henna Art": [
+    "Henna – By Chirag Sharma",
+    "Henna – By Senior Artist",
+  ],
+};
+
+/* -------------------- */
+/* LOCATION DATA        */
+/* -------------------- */
 const COUNTRIES = ["Nepal", "India", "Pakistan", "Bangladesh", "Dubai"];
 
 const COUNTRY_CODES: Record<string, string> = {
@@ -43,6 +64,10 @@ interface BookingFormData {
 const Book = (): JSX.Element => {
   const [params] = useSearchParams();
 
+  const rawService = params.get("service") || "";
+  const normalizedService =
+    SERVICE_NAME_MAP[rawService] || rawService;
+
   const emptyForm: BookingFormData = {
     service: "",
     package: "",
@@ -59,7 +84,7 @@ const Book = (): JSX.Element => {
 
   const [formData, setFormData] = useState<BookingFormData>({
     ...emptyForm,
-    service: params.get("service") || "",
+    service: normalizedService,
     package: params.get("package") || "",
   });
 
@@ -72,7 +97,11 @@ const Book = (): JSX.Element => {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "service" ? { package: "" } : {}),
+    }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -142,7 +171,7 @@ const Book = (): JSX.Element => {
               <SelectField label="Package" name="package" value={formData.package} onChange={handleChange}>
                 <option value="">Select Package</option>
                 {formData.service &&
-                  SERVICES[formData.service as keyof typeof SERVICES].map((p) => (
+                  SERVICES[formData.service as keyof typeof SERVICES]?.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
               </SelectField>
@@ -154,35 +183,28 @@ const Book = (): JSX.Element => {
               <InputField label="Email" name="email" value={formData.email} type="email" icon={<Mail size={16} />} onChange={handleChange} />
             </div>
 
-            {/* Phone — FIXED */}
+            {/* Phone */}
             <div>
               <label className="text-sm">Phone Number</label>
-
-              <div className="grid grid-cols-[110px_1fr] gap-2 w-full">
+              <div className="grid grid-cols-[110px_1fr] gap-2">
                 <select
-                  className="w-full min-w-0 border rounded-xl px-2 py-2 text-sm truncate appearance-none bg-white"
+                  className="border rounded-xl px-2 py-2"
                   value={formData.phone_country}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      phone_country: e.target.value,
-                    }))
+                    setFormData((p) => ({ ...p, phone_country: e.target.value }))
                   }
                 >
                   {Object.keys(COUNTRY_CODES).map((c) => (
-                    <option key={c} value={c}>
-                      {COUNTRY_CODES[c]}
-                    </option>
+                    <option key={c}>{COUNTRY_CODES[c]}</option>
                   ))}
                 </select>
 
                 <input
-                  className="w-full min-w-0 border rounded-xl px-4 py-2"
-                  placeholder="Enter phone number"
+                  className="border rounded-xl px-4 py-2"
                   value={formData.phone_number}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
+                    setFormData((p) => ({
+                      ...p,
                       phone_number: e.target.value.replace(/\D/g, ""),
                     }))
                   }
@@ -221,7 +243,6 @@ const Book = (): JSX.Element => {
         </div>
       </section>
 
-      {/* OTP MODAL */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-80">
@@ -254,12 +275,7 @@ const InputField = ({ label, icon, value, ...props }: any) => (
     <label className="text-sm">{label}</label>
     <div className="relative">
       {icon && <span className="absolute left-3 top-3">{icon}</span>}
-      <input
-        {...props}
-        value={value}
-        required
-        className="w-full border rounded-xl px-10 py-2"
-      />
+      <input {...props} value={value} required className="w-full border rounded-xl px-10 py-2" />
     </div>
   </div>
 );
