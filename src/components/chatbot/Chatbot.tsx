@@ -5,7 +5,6 @@ import {
   Minimize2,
   X,
   MessageCircle,
-  Sparkles,
   MessageSquare,
   Calendar,
   RefreshCw,
@@ -124,7 +123,6 @@ const Chatbot = () => {
   /* Reset chat when mode changes */
   useEffect(() => {
     if (chatMode === "simple" && agentState.sessionId) {
-      // Clear agent state when switching to simple mode
       setAgentState({
         sessionId: null,
         stage: "greeting",
@@ -134,17 +132,50 @@ const Chatbot = () => {
     }
   }, [chatMode]);
 
-  /* Detect booking intent and auto-switch to agent mode */
+  /* FIXED: Detect booking intent - MATCHES BACKEND LOGIC */
   const detectBookingIntent = (message: string): boolean => {
-    const bookingKeywords = [
-      "book", "booking", "appointment", "schedule", "reserve",
-      "makeup", "bridal", "party", "engagement", "service",
-      "want", "need", "looking for", "interested in",
-      "my details", "details are", "name:", "phone:", "email:"
+    const lowerMsg = message.toLowerCase().trim();
+    
+    // STRONG booking signals (explicit intent)
+    const strongSignals = [
+      "book", "booking", "i want to book", "want to book", "book this",
+      "book it", "proceed with booking", "confirm booking", "make booking",
+      "schedule", "reserve", "appointment", "i'll book", "let's book"
     ];
     
-    const lowerMsg = message.toLowerCase();
-    return bookingKeywords.some(keyword => lowerMsg.includes(keyword));
+    if (strongSignals.some(signal => lowerMsg.includes(signal))) {
+      return true;
+    }
+    
+    // Do NOT trigger on informational queries
+    const infoQueries = [
+      "list", "show", "tell me about", "what are", "what is",
+      "which", "how much", "cost", "price", "info", "information",
+      "tell me", "show me"
+    ];
+    
+    // If it's just asking for information, NOT booking
+    if (infoQueries.some(query => lowerMsg.includes(query))) {
+      return false;
+    }
+    
+    // Action words = booking intent
+    const actionWords = ["go for", "go with", "choose", "select", "pick", "get"];
+    if (actionWords.some(action => lowerMsg.includes(action))) {
+      return true;
+    }
+    
+    // "I want/need [service]" without "to know/information/details"
+    if ((lowerMsg.includes("i want") || lowerMsg.includes("i need")) &&
+        !["know", "information", "details", "about"].some(x => lowerMsg.includes(x))) {
+      return true;
+    }
+    
+    // Check for multiple details in one message
+    const detailPatterns = [/name[:\s]/, /phone[:\s]/, /email[:\s]/, /\d{10}/, /@/];
+    const detailCount = detailPatterns.filter(pattern => pattern.test(lowerMsg)).length;
+    
+    return detailCount >= 2;
   };
 
   /* Send message - handles both modes */
@@ -161,7 +192,6 @@ const Chatbot = () => {
     setInput("");
     setLoading(true);
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -170,11 +200,12 @@ const Chatbot = () => {
     abortRef.current = controller;
 
     try {
-      // Auto-detect booking intent and switch to agent mode
+      // ONLY auto-switch if in simple mode AND strong booking intent detected
       if (chatMode === "simple" && detectBookingIntent(userMessage.content)) {
         setChatMode("agent");
       }
 
+      // Use CURRENT chatMode to determine endpoint
       if (chatMode === "agent") {
         // AGENT MODE - Conversational Booking
         const res = await fetch(`${API_URL}/agent/chat`, {
@@ -202,7 +233,7 @@ const Chatbot = () => {
           bookingId: data.booking_id,
         });
 
-        // Update chat mode based on backend response
+        // SYNC chat mode with backend response
         if (data.chat_mode === "normal") {
           setChatMode("simple");
         } else if (data.chat_mode === "agent") {
@@ -214,10 +245,8 @@ const Chatbot = () => {
           { role: "assistant", content: data.reply },
         ]);
 
-        // Show success notification if booking confirmed
         if (data.action === "booking_confirmed") {
           setTimeout(() => {
-            // Reset to simple mode after successful booking
             setChatMode("simple");
             setAgentState({
               sessionId: null,
@@ -225,7 +254,6 @@ const Chatbot = () => {
               missingFields: [],
               bookingId: null,
             });
-            // Optionally show a toast notification
             showToast("🎉 Booking confirmed! Check your WhatsApp for details.", "success");
           }, 1000);
         }
@@ -280,18 +308,15 @@ const Chatbot = () => {
     }
   };
 
-  // Manual mode switch
   const switchMode = (mode: ChatMode) => {
     setChatMode(mode);
     if (mode === "simple") {
-      // Reset agent state when switching back to simple
       setAgentState({
         sessionId: null,
         stage: "greeting",
         missingFields: [],
         bookingId: null,
       });
-      // Add a message indicating mode switch
       if (messages.length > 0) {
         setMessages([
           ...messages,
@@ -302,7 +327,6 @@ const Chatbot = () => {
         ]);
       }
     } else {
-      // Switch to agent mode
       setAgentState({
         sessionId: null,
         stage: "greeting",
@@ -321,7 +345,6 @@ const Chatbot = () => {
     }
   };
 
-  // Reset conversation
   const resetConversation = () => {
     setMessages([]);
     setAgentState({
@@ -334,9 +357,7 @@ const Chatbot = () => {
     showToast("Conversation reset", "info");
   };
 
-  // Toast notification
   const showToast = (message: string, type: "success" | "error" | "info") => {
-    // Create toast element
     const toast = document.createElement("div");
     toast.className = `fixed top-6 right-6 z-[10001] px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
       type === "success" ? "bg-green-500" : 
@@ -347,7 +368,6 @@ const Chatbot = () => {
     
     document.body.appendChild(toast);
     
-    // Remove after 3 seconds
     setTimeout(() => {
       toast.classList.add("animate-fade-out");
       setTimeout(() => {
@@ -358,7 +378,6 @@ const Chatbot = () => {
     }, 3000);
   };
 
-  // Get stage display text
   const getStageDisplayText = (stage: string): string => {
     switch(stage) {
       case "greeting":
@@ -376,7 +395,6 @@ const Chatbot = () => {
     }
   };
 
-  // Get placeholder based on mode and stage
   const getPlaceholder = (): string => {
     if (chatMode === "agent") {
       switch(agentState.stage) {
@@ -406,7 +424,6 @@ const Chatbot = () => {
 
   return (
     <>
-      {/* Toast container (for notifications) */}
       <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(-10px); }
@@ -424,7 +441,6 @@ const Chatbot = () => {
         }
       `}</style>
 
-      {/* Guidance hint bubble */}
       {!open && showHint && (
         <div className="fixed bottom-24 right-6 z-[9999] animate-fade-in">
           <div className="relative bg-black text-white px-4 py-3 rounded-2xl shadow-xl max-w-[240px]">
@@ -437,7 +453,6 @@ const Chatbot = () => {
         </div>
       )}
 
-      {/* Floating button */}
       {!open && (
         <button
           onClick={() => {
@@ -461,7 +476,6 @@ const Chatbot = () => {
         </button>
       )}
 
-      {/* Chat window */}
       {open && (
         <div
           className={`fixed z-[9999] flex flex-col transition-all duration-300
@@ -471,7 +485,6 @@ const Chatbot = () => {
               : "bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-[420px] h-[580px] bg-white rounded-3xl shadow-2xl border border-gray-200"
           }`}
         >
-          {/* Header */}
           <div className={`flex items-center justify-between bg-black text-white
                           ${fullscreen ? "h-16 px-6" : "h-14 px-4 rounded-t-3xl"}`}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -480,7 +493,6 @@ const Chatbot = () => {
                   JinniChirag AI
                 </span>
                 
-                {/* Mode indicator with status */}
                 <div className="flex items-center gap-1">
                   {chatMode === "agent" ? (
                     <span className="flex items-center gap-1 text-xs bg-blue-500 px-2 py-0.5 rounded-full">
@@ -519,7 +531,6 @@ const Chatbot = () => {
             </div>
 
             <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-              {/* Reset button */}
               <button 
                 onClick={resetConversation}
                 className="hover:bg-white/10 rounded-lg p-1 sm:p-1.5 transition-colors"
@@ -529,7 +540,6 @@ const Chatbot = () => {
                 <RefreshCw size={16} />
               </button>
               
-              {/* Fullscreen toggle */}
               <button 
                 onClick={() => setFullscreen(v => !v)}
                 className="hover:bg-white/10 rounded-lg p-1 sm:p-1.5 transition-colors"
@@ -539,7 +549,6 @@ const Chatbot = () => {
                 {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
               </button>
               
-              {/* Close button */}
               <button
                 onClick={() => {
                   setOpen(false);
@@ -555,7 +564,6 @@ const Chatbot = () => {
             </div>
           </div>
 
-          {/* Agent Progress Indicator */}
           {chatMode === "agent" && agentState.stage !== "confirmed" && agentState.stage !== "greeting" && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-4 py-2">
               <div className="flex items-center justify-between text-xs">
@@ -579,7 +587,6 @@ const Chatbot = () => {
             </div>
           )}
 
-          {/* Welcome message if no messages */}
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mb-4">
@@ -623,7 +630,6 @@ const Chatbot = () => {
             </div>
           )}
 
-          {/* Messages container */}
           <div className="flex-1 overflow-y-auto py-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             <div className={`mx-auto space-y-5 ${fullscreen ? "max-w-4xl px-8" : "max-w-full px-5"}`}>
               {messages.map((msg, i) => (
@@ -680,10 +686,8 @@ const Chatbot = () => {
             </div>
           </div>
 
-          {/* Input section */}
           <div className={`bg-white border-t border-gray-200 
                           ${fullscreen ? "py-4 px-6" : "py-3 px-3 sm:py-3 sm:px-4"}`}>
-            {/* Mode indicator pill */}
             <div className="mb-2 flex justify-center">
               <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
                 <span className="text-xs font-medium text-gray-700">
