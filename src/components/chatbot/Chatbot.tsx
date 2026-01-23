@@ -8,28 +8,27 @@ import {
   MessageSquare,
   Calendar,
   RefreshCw,
+  ChevronDown,
+  Sparkles,
 } from "lucide-react";
 
-/* ---------------------------------- */
-/* Types */
-/* ---------------------------------- */
 type Role = "user" | "assistant";
 type Language = "en" | "ne" | "hi" | "mr";
 type ChatMode = "simple" | "agent";
 
-type Message = {
+interface Message {
   role: Role;
   content: string;
-};
+}
 
-type AgentState = {
+interface AgentState {
   sessionId: string | null;
   stage: string;
   missingFields: string[];
   bookingId: string | null;
-};
+}
 
-type AgentResponse = {
+interface AgentResponse {
   reply: string;
   session_id: string;
   stage: string;
@@ -37,17 +36,11 @@ type AgentResponse = {
   missing_fields: string[];
   booking_id: string | null;
   chat_mode: "normal" | "agent";
-};
+}
 
-/* ---------------------------------- */
-/* API & ASSETS */
-/* ---------------------------------- */
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const ASSISTANT_AVATAR = "/photos/yadavIcon.jpg";
 
-/* ---------------------------------- */
-/* Component */
-/* ---------------------------------- */
 const Chatbot = () => {
   const [open, setOpen] = useState(
     () => localStorage.getItem("chatbot_open") === "true"
@@ -55,14 +48,11 @@ const Chatbot = () => {
   const [fullscreen, setFullscreen] = useState(
     () => localStorage.getItem("chatbot_fullscreen") === "true"
   );
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [language, setLanguage] = useState<Language>("en");
-  
-  // Chat mode state - synchronized with backend
   const [chatMode, setChatMode] = useState<ChatMode>("simple");
   const [agentState, setAgentState] = useState<AgentState>({
     sessionId: null,
@@ -75,7 +65,6 @@ const Chatbot = () => {
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  /* Persist state */
   useEffect(() => {
     localStorage.setItem("chatbot_open", String(open));
   }, [open]);
@@ -84,7 +73,6 @@ const Chatbot = () => {
     localStorage.setItem("chatbot_fullscreen", String(fullscreen));
   }, [fullscreen]);
 
-  /* Popup hint */
   useEffect(() => {
     if (!open) {
       setShowHint(true);
@@ -93,12 +81,10 @@ const Chatbot = () => {
     }
   }, []);
 
-  /* Auto scroll */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  /* Abort on close */
   useEffect(() => {
     if (!open && abortRef.current) {
       abortRef.current.abort();
@@ -107,20 +93,20 @@ const Chatbot = () => {
     }
   }, [open]);
 
-  /* Fullscreen scroll lock */
   useEffect(() => {
     document.body.style.overflow = fullscreen ? "hidden" : "";
   }, [fullscreen]);
 
-  /* Auto-resize textarea */
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        120
+      )}px`;
     }
   }, [input]);
 
-  /* Reset chat when mode changes */
   useEffect(() => {
     if (chatMode === "simple" && agentState.sessionId) {
       setAgentState({
@@ -132,99 +118,155 @@ const Chatbot = () => {
     }
   }, [chatMode]);
 
-  /* FIXED: Detect booking intent - MATCHES BACKEND LOGIC */
   const detectBookingIntent = (message: string): boolean => {
     const lowerMsg = message.toLowerCase().trim();
-    
-    // STRONG booking signals (explicit intent)
+
+    // STRONG booking signals
     const strongSignals = [
-      "book", "booking", "i want to book", "want to book", "book this",
-      "book it", "proceed with booking", "confirm booking", "make booking",
-      "schedule", "reserve", "appointment", "i'll book", "let's book"
+      "book",
+      "booking",
+      "i want to book",
+      "want to book",
+      "book this",
+      "book it",
+      "make booking",
+      "i'll book",
+      "let's book",
+      "schedule",
+      "reserve",
+      "appointment",
+      "make an appointment",
+      "book makeup",
+      "book a makeup",
+      "book for makeup",
+      "book service",
+      "book now",
+      "proceed with booking",
+      "confirm booking",
+      "make reservation",
+      "book appointment",
+      "book session",
+      "book makeup session",
+      "book makeup appointment",
+      "go for",
+      "go with",
+      "choose",
+      "select",
+      "pick",
+      "get",
+      "take",
+      "option",
+      "i'd like to book",
+      "i'd like to make",
+      "looking to book",
+      "interested in booking",
+      "can you book",
+      "could you book",
+      "help me book",
+      "want to reserve",
     ];
-    
-    if (strongSignals.some(signal => lowerMsg.includes(signal))) {
+
+    // Check for any strong signal
+    if (strongSignals.some((signal) => lowerMsg.includes(signal))) {
       return true;
     }
-    
-    // Do NOT trigger on informational queries
-    const infoQueries = [
-      "list", "show", "tell me about", "what are", "what is",
-      "which", "how much", "cost", "price", "info", "information",
-      "tell me", "show me"
-    ];
-    
-    // If it's just asking for information, NOT booking
-    if (infoQueries.some(query => lowerMsg.includes(query))) {
-      return false;
-    }
-    
-    // Action words = booking intent
-    const actionWords = ["go for", "go with", "choose", "select", "pick", "get"];
-    if (actionWords.some(action => lowerMsg.includes(action))) {
+
+    // Check for numeric selection (1, 2, 3, 4) when in service list context
+    const hasNumber = /\b[1-4]\b/.test(lowerMsg);
+    const hasActionWord = [
+      "go for",
+      "choose",
+      "select",
+      "pick",
+      "take",
+      "option",
+    ].some((word) => lowerMsg.includes(word));
+
+    if (hasNumber && hasActionWord) {
       return true;
     }
-    
-    // "I want/need [service]" without "to know/information/details"
-    if ((lowerMsg.includes("i want") || lowerMsg.includes("i need")) &&
-        !["know", "information", "details", "about"].some(x => lowerMsg.includes(x))) {
+
+    // Check for "I want [service]" pattern
+    const services = ["bridal", "party", "engagement", "henna", "mehendi"];
+    const actionWords = ["i want", "i need", "looking for", "interested in"];
+
+    if (
+      actionWords.some((action) => lowerMsg.includes(action)) &&
+      services.some((service) => lowerMsg.includes(service))
+    ) {
       return true;
     }
-    
-    // Check for multiple details in one message
-    const detailPatterns = [/name[:\s]/, /phone[:\s]/, /email[:\s]/, /\d{10}/, /@/];
-    const detailCount = detailPatterns.filter(pattern => pattern.test(lowerMsg)).length;
-    
-    return detailCount >= 2;
+
+    return false;
   };
 
-  /* Send message - handles both modes */
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
-
-    const userMessage: Message = {
-      role: "user",
-      content: input.trim(),
-    };
-
-    const newMessages = [...messages, userMessage];
+    const userMessage = input.trim();
+    const newMessages: Message[] = [
+      ...messages,
+      { role: "user", content: userMessage },
+    ];
     setMessages(newMessages);
     setInput("");
     setLoading(true);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     const controller = new AbortController();
     abortRef.current = controller;
-
+  
     try {
-      // ONLY auto-switch if in simple mode AND strong booking intent detected
-      if (chatMode === "simple" && detectBookingIntent(userMessage.content)) {
+      // CRITICAL: If user shows ANY booking intent, switch to agent mode IMMEDIATELY
+      let shouldUseAgent = chatMode === "agent" || agentState.sessionId;
+      
+      // Enhanced booking detection
+      const hasBookingIntent = detectBookingIntent(userMessage);
+      const hasNumericSelection = /\b[1-4]\b/.test(userMessage.toLowerCase());
+      const contextHasServices = messages.some(m => 
+        m.role === "assistant" && m.content.includes("1. Bridal")
+      );
+      
+      // If user is selecting from a list (1, 2, 3, 4) in context of services
+      if (hasNumericSelection && contextHasServices && !shouldUseAgent) {
+        shouldUseAgent = true;
         setChatMode("agent");
       }
-
-      // Use CURRENT chatMode to determine endpoint
-      if (chatMode === "agent") {
-        // AGENT MODE - Conversational Booking
-        const res = await fetch(`${API_URL}/agent/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: userMessage.content,
-            session_id: agentState.sessionId,
-            language,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          throw new Error(`Agent API error: ${res.status}`);
-        }
-
+      
+      // If user explicitly says booking-related things
+      if (hasBookingIntent && !shouldUseAgent) {
+        shouldUseAgent = true;
+        setChatMode("agent");
+      }
+  
+      let endpoint = "/chat";
+      let payload: any = {
+        messages: newMessages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        language,
+      };
+  
+      if (shouldUseAgent) {
+        endpoint = "/agent/chat";
+        payload = {
+          message: userMessage,
+          session_id: agentState.sessionId,
+          language,
+        };
+      }
+  
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+  
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+  
+      if (shouldUseAgent) {
         const data: AgentResponse = await res.json();
-
+        
         // Update agent state
         setAgentState({
           sessionId: data.session_id,
@@ -232,19 +274,17 @@ const Chatbot = () => {
           missingFields: data.missing_fields || [],
           bookingId: data.booking_id,
         });
-
-        // SYNC chat mode with backend response
-        if (data.chat_mode === "normal") {
-          setChatMode("simple");
-        } else if (data.chat_mode === "agent") {
+        
+        // Force agent mode if backend says so
+        if (data.chat_mode === "agent") {
           setChatMode("agent");
         }
-
+        
         setMessages([
           ...newMessages,
           { role: "assistant", content: data.reply },
         ]);
-
+        
         if (data.action === "booking_confirmed") {
           setTimeout(() => {
             setChatMode("simple");
@@ -254,30 +294,15 @@ const Chatbot = () => {
               missingFields: [],
               bookingId: null,
             });
-            showToast("🎉 Booking confirmed! Check your WhatsApp for details.", "success");
+            showToast(
+              "🎉 Booking confirmed! Check your WhatsApp for details.",
+              "success"
+            );
           }, 1000);
         }
+        
       } else {
-        // SIMPLE MODE - Q&A
-        const res = await fetch(`${API_URL}/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            messages: newMessages.map(msg => ({
-              role: msg.role,
-              content: msg.content
-            })), 
-            language 
-          }),
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          throw new Error(`Chat API error: ${res.status}`);
-        }
-
         const data = await res.json();
-
         setMessages([
           ...newMessages,
           { role: "assistant", content: data.reply },
@@ -288,9 +313,9 @@ const Chatbot = () => {
         console.error("Chat error:", err);
         setMessages([
           ...newMessages,
-          { 
-            role: "assistant", 
-            content: "Sorry, something went wrong. Please try again." 
+          {
+            role: "assistant",
+            content: "Sorry, something went wrong. Please try again.",
           },
         ]);
         showToast("Failed to send message. Please try again.", "error");
@@ -309,39 +334,42 @@ const Chatbot = () => {
   };
 
   const switchMode = (mode: ChatMode) => {
-    setChatMode(mode);
-    if (mode === "simple") {
-      setAgentState({
-        sessionId: null,
-        stage: "greeting",
-        missingFields: [],
-        bookingId: null,
-      });
-      if (messages.length > 0) {
+    // If trying to switch FROM agent mode, ask for confirmation
+    if (chatMode === "agent" && mode === "simple") {
+      if (
+        window.confirm(
+          "Are you sure you want to exit booking mode? All booking progress will be lost."
+        )
+      ) {
+        setAgentState({
+          sessionId: null,
+          stage: "greeting",
+          missingFields: [],
+          bookingId: null,
+        });
+        setChatMode("simple");
         setMessages([
           ...messages,
-          { 
-            role: "assistant", 
-            content: "Switched to general chat mode. How can I help you today?" 
+          {
+            role: "assistant",
+            content: "Exited booking mode. How can I help you today?",
           },
         ]);
       }
-    } else {
-      setAgentState({
-        sessionId: null,
-        stage: "greeting",
-        missingFields: [],
-        bookingId: null,
-      });
-      if (messages.length > 0) {
-        setMessages([
-          ...messages,
-          { 
-            role: "assistant", 
-            content: "Switched to booking mode. Let me help you book a makeup service!" 
-          },
-        ]);
-      }
+      return;
+    }
+
+    // Switching TO agent mode
+    if (mode === "agent") {
+      setChatMode("agent");
+      setMessages([
+        ...messages,
+        {
+          role: "assistant",
+          content:
+            "✅ **BOOKING MODE ACTIVATED**\n\nI'll help you book makeup services!\n\nPlease tell me which service you'd like to book:\n\n🎭 **Bridal Makeup Services**\n💃 **Party Makeup Services**\n💍 **Engagement & Pre-Wedding Makeup**\n🌸 **Henna (Mehendi) Services**\n\nYou can say something like 'I want to book bridal makeup' or 'Book party makeup for me'",
+        },
+      ]);
     }
   };
 
@@ -359,96 +387,178 @@ const Chatbot = () => {
 
   const showToast = (message: string, type: "success" | "error" | "info") => {
     const toast = document.createElement("div");
-    toast.className = `fixed top-6 right-6 z-[10001] px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
-      type === "success" ? "bg-green-500" : 
-      type === "error" ? "bg-red-500" : 
-      "bg-blue-500"
+    toast.className = `fixed top-6 right-6 z-[10001] px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-slide-in ${
+      type === "success"
+        ? "bg-green-500"
+        : type === "error"
+        ? "bg-red-500"
+        : "bg-blue-500"
     }`;
     toast.textContent = message;
-    
     document.body.appendChild(toast);
-    
     setTimeout(() => {
-      toast.classList.add("animate-fade-out");
+      toast.classList.add("animate-slide-out");
       setTimeout(() => {
-        if (document.body.contains(toast)) {
-          document.body.removeChild(toast);
-        }
+        if (document.body.contains(toast)) document.body.removeChild(toast);
       }, 300);
     }, 3000);
   };
 
   const getStageDisplayText = (stage: string): string => {
-    switch(stage) {
-      case "greeting":
-        return "👋 Welcome";
-      case "collecting_info":
-        return "📝 Collecting details";
-      case "otp_sent":
-        return "📱 OTP sent";
-      case "otp_verification":
-        return "🔐 Verifying OTP";
-      case "confirmed":
-        return "✅ Booking confirmed";
-      default:
-        return stage;
-    }
+    const stages: Record<string, string> = {
+      greeting: "👋 Welcome",
+      selecting_service: "🎯 Selecting service",
+      selecting_package: "📦 Choosing package",
+      collecting_details: "📝 Collecting details",
+      confirming: "✅ Confirming booking",
+      otp_sent: "📱 OTP sent",
+      collecting_info: "📝 Collecting details",
+      otp_verification: "🔐 Verifying OTP",
+      confirmed: "✅ Booking confirmed",
+    };
+    return stages[stage] || stage;
   };
 
   const getPlaceholder = (): string => {
     if (chatMode === "agent") {
-      switch(agentState.stage) {
+      switch (agentState.stage) {
         case "otp_sent":
-          return language === "en" ? "Enter 6-digit OTP..." :
-                 language === "ne" ? "६-अंकको OTP प्रविष्ट गर्नुहोस्..." :
-                 language === "hi" ? "६-अंकीय OTP दर्ज करें..." :
-                 "६-अंकी OTP प्रविष्ट करा...";
+          return language === "en"
+            ? "Enter 6-digit OTP..."
+            : language === "ne"
+            ? "६-अंकको OTP प्रविष्ट गर्नुहोस्..."
+            : language === "hi"
+            ? "६-अंकीय OTP दर्ज करें..."
+            : "६-अंकी OTP प्रविष्ट करा...";
+        case "collecting_details":
         case "collecting_info":
-          return language === "en" ? "Provide booking information..." :
-                 language === "ne" ? "बुकिङ जानकारी प्रदान गर्नुहोस्..." :
-                 language === "hi" ? "बुकिंग जानकारी प्रदान करें..." :
-                 "बुकिंग माहिती प्रदान करा...";
+          return language === "en"
+            ? "Provide your details..."
+            : language === "ne"
+            ? "तपाईंको विवरण प्रदान गर्नुहोस्..."
+            : language === "hi"
+            ? "अपना विवरण प्रदान करें..."
+            : "तुमचे तपशील प्रदान करा...";
+        case "confirming":
+          return language === "en"
+            ? "Reply 'yes' to confirm..."
+            : language === "ne"
+            ? "पुष्टि गर्न 'yes' लेख्नुहोस्..."
+            : language === "hi"
+            ? "पुष्टि के लिए 'yes' लिखें..."
+            : "पुष्टीकरणासाठी 'yes' लिहा...";
         default:
-          return language === "en" ? "Type your response..." :
-                 language === "ne" ? "तपाईंको जवाफ टाइप गर्नुहोस्..." :
-                 language === "hi" ? "अपना उत्तर टाइप करें..." :
-                 "तुमचे उत्तर टाइप करा...";
+          return language === "en"
+            ? "Type your response..."
+            : language === "ne"
+            ? "तपाईंको जवाफ..."
+            : language === "hi"
+            ? "अपना उत्तर..."
+            : "तुमचे उत्तर...";
       }
-    } else {
-      return language === "en" ? "Message..." :
-             language === "ne" ? "सन्देश..." :
-             language === "hi" ? "संदेश..." :
-             "संदेश...";
     }
+    return language === "en"
+      ? "Message..."
+      : language === "ne"
+      ? "सन्देश..."
+      : language === "hi"
+      ? "संदेश..."
+      : "संदेश...";
   };
 
   return (
     <>
       <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fade-out {
-          from { opacity: 1; transform: translateY(0); }
-          to { opacity: 0; transform: translateY(-10px); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-        .animate-fade-out {
-          animation: fade-out 0.3s ease-in;
-        }
-      `}</style>
+  /* Hint popup should slide in from right */
+  @keyframes slide-in {
+    0% {
+      opacity: 0;
+      transform: translateX(40px); /* Start from further right */
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slide-out {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(40px); /* Exit to the right */
+    }
+  }
+  
+  /* Chat button floating animation */
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .animate-slide-out {
+    animation: slide-out 0.3s ease-in;
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+`}</style>
 
       {!open && showHint && (
-        <div className="fixed bottom-24 right-6 z-[9999] animate-fade-in">
-          <div className="relative bg-black text-white px-4 py-3 rounded-2xl shadow-xl max-w-[240px]">
-            <p className="font-semibold text-sm">👋 Hi! I'm here to guide you</p>
-            <p className="text-xs text-gray-300 mt-1">
-              Ask me anything or book an appointment
-            </p>
-            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-black transform rotate-45" />
+        <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
+          <div className="relative bg-gradient-to-br from-gray-900 to-black text-white px-4 py-4 rounded-3xl shadow-2xl max-w-[310px] border border-gray-700 animate-slide-in">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm mb-1">Hi there! 👋</p>
+                <p className="text-xs text-gray-300">
+                  Need help booking makeup services?
+                </p>
+              </div>
+            </div>
+            <div className="absolute -bottom-1.5 right-6 w-4 h-4 bg-black transform rotate-45 border-r border-b border-gray-700" />
           </div>
         </div>
       )}
@@ -459,20 +569,27 @@ const Chatbot = () => {
             setOpen(true);
             setShowHint(false);
           }}
-          className="fixed bottom-6 right-6 z-[10000]
-                     h-14 w-14 rounded-full bg-black text-white
-                     shadow-2xl flex items-center justify-center
-                     hover:scale-110 hover:shadow-3xl
-                     transition-all duration-300 ease-out
-                     group"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[10000]
+               h-14 w-14 rounded-full bg-gradient-to-br from-gray-900 to-black text-white
+               shadow-2xl flex items-center justify-center
+               hover:scale-110 hover:shadow-3xl
+               transition-all duration-300 ease-out
+               group border border-gray-700 animate-float"
           aria-label="Open chat"
         >
-          <MessageCircle size={24} strokeWidth={2.5} />
-          {chatMode === "agent" && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <Calendar size={10} />
-            </span>
-          )}
+          <div className="relative">
+            <MessageCircle
+              size={22}
+              strokeWidth={2.5}
+              className="text-white transition-transform group-hover:scale-110"
+            />
+            {chatMode === "agent" && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg border border-white">
+                <Calendar size={8} className="text-white" />
+              </span>
+            )}
+          </div>
+          {/* Remove the duplicate floating div that was covering the button */}
         </button>
       )}
 
@@ -485,108 +602,135 @@ const Chatbot = () => {
               : "bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-[420px] h-[580px] bg-white rounded-3xl shadow-2xl border border-gray-200"
           }`}
         >
-          <div className={`flex items-center justify-between bg-black text-white
-                          ${fullscreen ? "h-16 px-6" : "h-14 px-4 rounded-t-3xl"}`}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`font-semibold truncate ${fullscreen ? "text-lg" : "text-sm sm:text-base"}`}>
-                  JinniChirag AI
-                </span>
-                
-                <div className="flex items-center gap-1">
-                  {chatMode === "agent" ? (
-                    <span className="flex items-center gap-1 text-xs bg-blue-500 px-2 py-0.5 rounded-full">
-                      <Calendar size={12} />
-                      <span>Booking</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs bg-gray-600 px-2 py-0.5 rounded-full">
-                      <MessageSquare size={12} />
-                      <span>Chat</span>
-                    </span>
-                  )}
+          {/* Header - Beautiful design from first code */}
+          <div
+            className={`flex items-center justify-between bg-gradient-to-r from-gray-900 via-black to-gray-900 text-white
+                          ${
+                            fullscreen ? "h-16 px-6" : "h-14 px-4 rounded-t-3xl"
+                          }`}
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                  <Sparkles size={18} className="text-white" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`font-bold truncate ${
+                      fullscreen ? "text-base" : "text-sm sm:text-base"
+                    }`}
+                  >
+                    JinniChirag AI
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {chatMode === "agent" ? (
+                      <span className="flex items-center gap-1 text-xs bg-gradient-to-r from-blue-500 to-indigo-600 px-2 py-0.5 rounded-full shadow-md">
+                        <Calendar size={10} />
+                        <span className="font-medium hidden sm:inline">
+                          Booking
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs bg-gray-700 px-2 py-0.5 rounded-full">
+                        <MessageSquare size={10} />
+                        <span className="font-medium hidden sm:inline">
+                          Chat
+                        </span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 
-                          rounded-md px-2 py-1 text-[11px] sm:text-xs font-medium
-                          hover:bg-white/20 transition-colors cursor-pointer
-                          focus:outline-none focus:ring-2 focus:ring-white/40
-                          appearance-none pr-6 bg-no-repeat bg-right
-                          max-w-[80px] sm:max-w-none"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                  backgroundPosition: "right 4px center",
-                  backgroundSize: "12px"
-                }}
-              >
-                <option value="en" className="bg-black text-white">EN</option>
-                <option value="ne" className="bg-black text-white">नेपाली</option>
-                <option value="hi" className="bg-black text-white">हिंदी</option>
-                <option value="mr" className="bg-black text-white">मराठी</option>
-              </select>
+
+              <div className="relative flex-shrink-0">
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as Language)}
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 
+                            rounded-md px-1.5 py-1 text-[11px] font-semibold
+                            hover:bg-white/20 transition-all cursor-pointer
+                            focus:outline-none focus:ring-2 focus:ring-white/40
+                            appearance-none pr-4 w-[56px]"
+                >
+                  <option value="en" className="bg-gray-900 text-white">
+                    EN
+                  </option>
+                  <option value="ne" className="bg-gray-900 text-white">
+                    नेपा
+                  </option>
+                  <option value="hi" className="bg-gray-900 text-white">
+                    हिंदी
+                  </option>
+                  <option value="mr" className="bg-gray-900 text-white">
+                    मराठी
+                  </option>
+                </select>
+                <ChevronDown
+                  size={10}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/60"
+                />
+              </div>
             </div>
 
-            <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-              <button 
+            <div className="flex gap-2 sm:gap-1 flex-shrink-0 ml-2">
+              <button
                 onClick={resetConversation}
-                className="hover:bg-white/10 rounded-lg p-1 sm:p-1.5 transition-colors"
-                title="Reset conversation"
-                aria-label="Reset conversation"
+                className="hover:bg-white/10 rounded-lg p-1.5 transition-all hover:scale-110 active:scale-95"
+                title="Reset"
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={15} />
               </button>
-              
-              <button 
-                onClick={() => setFullscreen(v => !v)}
-                className="hover:bg-white/10 rounded-lg p-1 sm:p-1.5 transition-colors"
-                title={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+
+              <button
+                onClick={() => setFullscreen((v) => !v)}
+                className="hover:bg-white/10 rounded-lg p-1.5 transition-all hover:scale-110 active:scale-95"
+                title={fullscreen ? "Exit" : "Fullscreen"}
               >
-                {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={13} />}
               </button>
-              
+
               <button
                 onClick={() => {
                   setOpen(false);
                   setFullscreen(false);
                 }}
-                className="hover:bg-red-500/20 text-red-400 hover:text-red-300 
-                          rounded-lg p-1 sm:p-1.5 transition-colors"
-                title="Close chat"
-                aria-label="Close chat"
+                className="hover:bg-red-500/30 text-red-400 hover:text-white 
+                          rounded-lg p-1.5 transition-all hover:scale-105 active:scale-95"
+                title="Close"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
           </div>
 
-          {chatMode === "agent" && agentState.stage !== "confirmed" && agentState.stage !== "greeting" && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-4 py-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-700 font-medium">
-                    {getStageDisplayText(agentState.stage)}
-                  </span>
-                  {agentState.stage === "collecting_info" && agentState.missingFields.length > 0 && (
-                    <span className="text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                      {agentState.missingFields.length} more needed
+          {/* Stage Indicator */}
+          {chatMode === "agent" &&
+            agentState.stage !== "greeting" &&
+            agentState.stage !== "confirmed" && (
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-200 px-4 py-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-blue-900 font-semibold">
+                      {getStageDisplayText(agentState.stage)}
                     </span>
-                  )}
-                </div>
-                {agentState.stage === "collecting_info" && agentState.missingFields.length > 0 && (
-                  <div className="text-blue-600 text-[10px] truncate max-w-[200px]">
-                    Need: {agentState.missingFields.slice(0, 2).join(", ")}
-                    {agentState.missingFields.length > 2 && "..."}
                   </div>
-                )}
+                  {(agentState.stage === "collecting_details" ||
+                    agentState.stage === "collecting_info") &&
+                    agentState.missingFields.length > 0 && (
+                      <span className="text-blue-700 bg-blue-200 px-2 py-0.5 rounded-full font-medium">
+                        {agentState.missingFields.length} needed
+                      </span>
+                    )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
+          {/* Empty State */}
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mb-4">
@@ -600,7 +744,7 @@ const Chatbot = () => {
                 {chatMode === "agent" ? "Booking Assistant" : "Chat Assistant"}
               </h3>
               <p className="text-gray-600 text-sm max-w-xs mb-4">
-                {chatMode === "agent" 
+                {chatMode === "agent"
                   ? "I'll help you book makeup services. Please provide your details."
                   : "Ask me anything about makeup services, pricing, or availability."}
               </p>
@@ -630,33 +774,42 @@ const Chatbot = () => {
             </div>
           )}
 
+          {/* Messages - Second code positioning with first code design */}
           <div className="flex-1 overflow-y-auto py-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            <div className={`mx-auto space-y-5 ${fullscreen ? "max-w-4xl px-8" : "max-w-full px-5"}`}>
+            <div
+              className={`mx-auto space-y-5 ${
+                fullscreen ? "max-w-4xl px-8" : "max-w-full px-5"
+              }`}
+            >
               {messages.map((msg, i) => (
                 <div
                   key={i}
                   className={`flex gap-3 ${
                     msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
+                  style={{ animationDelay: `${i * 100}ms` }}
                 >
                   {msg.role === "assistant" && (
-                    <img
-                      src={ASSISTANT_AVATAR}
-                      alt="Assistant"
-                      className={`rounded-full object-cover flex-shrink-0 
-                        ${fullscreen ? "h-11 w-11" : "h-9 w-9"}
-                        ring-2 ring-gray-200 shadow-sm`}
-                    />
+                    <div className="relative flex-shrink-0 animate-slide-in">
+                      <img
+                        src={ASSISTANT_AVATAR}
+                        alt="Assistant"
+                        className={`rounded-full object-cover flex-shrink-0 
+            ${fullscreen ? "h-11 w-11" : "h-9 w-9"}
+            ring-2 ring-purple-200 shadow-md`}
+                      />
+                    </div>
                   )}
 
                   <div
                     className={`px-4 py-3 rounded-2xl text-[15px] leading-relaxed
-                    max-w-[75%] shadow-sm whitespace-pre-wrap break-words
-                    ${
-                      msg.role === "user"
-                        ? "bg-gradient-to-r from-black to-gray-800 text-white rounded-br-md"
-                        : "bg-gradient-to-r from-gray-50 to-white text-gray-800 rounded-bl-md border border-gray-100"
-                    }`}
+      max-w-[75%] shadow-sm whitespace-pre-wrap break-words
+      transition-all duration-200
+      ${
+        msg.role === "user"
+          ? "bg-gradient-to-br from-gray-900 to-black text-white rounded-br-md"
+          : "bg-gradient-to-br from-white to-gray-50 text-gray-800 rounded-bl-md border border-gray-100 animate-slide-in"
+      }`}
                   >
                     {msg.content}
                   </div>
@@ -665,18 +818,29 @@ const Chatbot = () => {
 
               {loading && (
                 <div className="flex gap-3 justify-start">
-                  <img
-                    src={ASSISTANT_AVATAR}
-                    alt="Assistant"
-                    className={`rounded-full object-cover flex-shrink-0 
-                      ${fullscreen ? "h-11 w-11" : "h-9 w-9"}
-                      ring-2 ring-gray-200 shadow-sm`}
-                  />
-                  <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-100">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={ASSISTANT_AVATAR}
+                      alt="Assistant"
+                      className={`rounded-full object-cover flex-shrink-0 
+          ${fullscreen ? "h-11 w-11" : "h-9 w-9"}
+          ring-2 ring-purple-200 shadow-md`}
+                    />
+                  </div>
+                  <div className="bg-gradient-to-br from-white to-gray-50 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-100">
                     <div className="flex gap-1.5">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -686,23 +850,36 @@ const Chatbot = () => {
             </div>
           </div>
 
-          <div className={`bg-white border-t border-gray-200 
-                          ${fullscreen ? "py-4 px-6" : "py-3 px-3 sm:py-3 sm:px-4"}`}>
+          {/* Input Area - First code design */}
+          <div
+            className={`bg-white border-t border-gray-200 
+                          ${
+                            fullscreen
+                              ? "py-4 px-6"
+                              : "py-3 px-3 sm:py-3 sm:px-4"
+                          }`}
+          >
             <div className="mb-2 flex justify-center">
-              <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
-                <span className="text-xs font-medium text-gray-700">
-                  {chatMode === "agent" ? "📅 Booking Mode" : "💬 Chat Mode"}
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-full px-3 py-1 shadow-sm border border-gray-200">
+                <span className="text-xs font-semibold text-gray-700">
+                  {chatMode === "agent" ? "📅 Booking" : "💬 Chat"}
                 </span>
                 <button
-                  onClick={() => switchMode(chatMode === "simple" ? "agent" : "simple")}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={() =>
+                    switchMode(chatMode === "simple" ? "agent" : "simple")
+                  }
+                  className="text-xs text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-2.5 py-1 rounded-full font-semibold transition-all hover:scale-105 active:scale-95 shadow-md"
                 >
-                  Switch to {chatMode === "simple" ? "Booking" : "Chat"}
+                  Switch
                 </button>
               </div>
             </div>
 
-            <div className={`mx-auto flex gap-2 items-end ${fullscreen ? "max-w-4xl" : "max-w-full"}`}>
+            <div
+              className={`mx-auto flex gap-2 items-end ${
+                fullscreen ? "max-w-4xl" : "max-w-full"
+              }`}
+            >
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -721,7 +898,7 @@ const Chatbot = () => {
                           disabled:opacity-50 disabled:cursor-not-allowed
                           resize-none overflow-y-auto
                           max-h-[120px] leading-relaxed"
-                style={{ scrollbarWidth: 'thin' }}
+                style={{ scrollbarWidth: "thin" }}
               />
 
               <button
@@ -733,8 +910,8 @@ const Chatbot = () => {
                             loading || !input.trim()
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : chatMode === "agent"
-                              ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90"
-                              : "bg-gradient-to-r from-black to-gray-800 text-white hover:opacity-90"
+                              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:scale-110"
+                              : "bg-gradient-to-br from-gray-900 to-black text-white hover:scale-110"
                           }`}
                 aria-label="Send message"
               >

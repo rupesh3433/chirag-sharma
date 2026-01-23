@@ -1,88 +1,689 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { ArrowUp } from 'lucide-react';
+import React, { useEffect, useRef, useState } from "react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { Link } from "react-router-dom";
+import {
+  CheckCircle,
+  Play,
+  Instagram,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 
-/* ✅ Lazy load heavy sections */
-const Hero = lazy(() => import('../components/home/Hero'));
-const Services = lazy(() => import('../components/home/Services'));
-const Portfolio = lazy(() => import('../components/home/Portfolio'));
-const Testimonials = lazy(() => import('../components/home/Testimonials'));
+/* -------------------- DATA -------------------- */
+
+const servicesData = [
+  {
+    id: 1,
+    title: "Bridal Makeup",
+    description:
+      "Luxury bridal makeup by Celebrity Makeup Artist Chirag Sharma with premium products and flawless finish.",
+    image: "/photos/chirag1.PNG",
+    features: [
+      "Signature bridal looks",
+      "HD / Brush technique",
+      "Luxury international products",
+      "Fully customized finish",
+    ],
+  },
+  {
+    id: 2,
+    title: "Party Makeup",
+    description:
+      "Glam makeup for receptions, engagements, cocktails, and special events.",
+    image: "/photos/chirag2.PNG",
+    features: [
+      "By Chirag Sharma or Senior Artist",
+      "Event-based customization",
+      "Long-lasting glam",
+      "Premium products",
+    ],
+  },
+  {
+    id: 3,
+    title: "Henna (Mehendi)",
+    description:
+      "Intricate bridal and party henna using premium natural henna.",
+    image: "/photos/chirag3.PNG",
+    features: [
+      "By Chirag or Senior Artist",
+      "Traditional & modern designs",
+      "Bridal henna available",
+      "Natural ingredients",
+    ],
+  },
+  {
+    id: 4,
+    title: "Celebrity Makeup",
+    description:
+      "High-end celebrity makeup services delivered with VIP standards.",
+    image: "/photos/chirag4.PNG",
+    features: [
+      "Celebrity MUA",
+      "9+ years experience",
+      "Luxury service standards",
+      "Event & bridal focus",
+    ],
+  },
+];
+
+const portfolioItems = [
+  {
+    id: 1,
+    title: "Bridal Elegance",
+    category: "Bridal Makeup",
+    image:
+      "https://images.unsplash.com/photo-1594489573233-c2d4e4e5f106?auto=format&fit=crop&q=80&w=2000",
+    description: "Crafting timeless bridal looks with a touch of magic",
+  },
+  {
+    id: 2,
+    title: "Editorial Dream",
+    category: "Editorial Makeup",
+    image:
+      "https://images.unsplash.com/photo-1542145748-72b2eb8576cd?auto=format&fit=crop&q=80&w=2000",
+    description: "Bold, creative looks for photoshoots and fashion events",
+  },
+  {
+    id: 3,
+    title: "Glamorous Evening",
+    category: "Party Makeup",
+    image:
+      "https://images.unsplash.com/photo-1588731247530-4076fc99173e?auto=format&fit=crop&q=80&w=2000",
+    description: "Stunning looks that last throughout your special night",
+  },
+  {
+    id: 4,
+    title: "Intricate Henna",
+    category: "Henna Art",
+    image:
+      "https://images.unsplash.com/photo-1583266999030-4fba155cca8e?auto=format&fit=crop&q=80&w=2000",
+    description: "Beautiful designs that tell your unique story",
+  },
+];
+
+const videoPortfolioItems = [
+  {
+    id: 1,
+    title: "Bridal Transformation",
+    videoUrl: "https://www.instagram.com/p/CrGyxUDI7dl/embed",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1594489573233-c2d4e4e5f106?auto=format&fit=crop&q=80&w=2000",
+    instagramLink: "https://www.instagram.com/p/CrGyxUDI7dl/",
+  },
+  {
+    id: 2,
+    title: "Makeup Tutorial",
+    videoUrl: "https://www.instagram.com/p/CqWzc6DIvLp/embed",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1542145748-72b2eb8576cd?auto=format&fit=crop&q=80&w=2000",
+    instagramLink: "https://www.instagram.com/p/CqWzc6DIvLp/",
+  },
+  {
+    id: 3,
+    title: "Behind the Scenes",
+    videoUrl: "https://www.instagram.com/p/Cp9ZsHIovZ3/embed",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1588731247530-4076fc99173e?auto=format&fit=crop&q=80&w=2000",
+    instagramLink: "https://www.instagram.com/p/Cp9ZsHIovZ3/",
+  },
+];
+
+const testimonials = [
+  {
+    id: 1,
+    name: "Priya Singh",
+    role: "Bride",
+    image:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=1974",
+    quote:
+      "Chirag transformed me into the bride I always dreamed of becoming. The makeup was flawless and lasted throughout my wedding day. Highly recommend!",
+    rating: 5,
+  },
+  {
+    id: 2,
+    name: "Aisha Kapoor",
+    role: "Fashion Model",
+    image:
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=1974",
+    quote:
+      "Working with Chirag for my editorial shoots has been amazing. His artistic vision and attention to detail are unmatched in the industry.",
+    rating: 5,
+  },
+  {
+    id: 3,
+    name: "Neha Sharma",
+    role: "Celebrity",
+    image:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1974",
+    quote:
+      "Chirag has been my go-to makeup artist for all my public appearances. His ability to create unique looks that complement my style is extraordinary.",
+    rating: 5,
+  },
+  {
+    id: 4,
+    name: "Mira Patel",
+    role: "Regular Client",
+    image:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=1974",
+    quote:
+      "The henna designs Chirag created for my sister's wedding were breathtaking. Everyone couldn't stop complimenting the intricate patterns.",
+    rating: 5,
+  },
+];
+
+/* -------------------- COMPONENT -------------------- */
 
 const Index = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeVideo, setActiveVideo] = useState<number | null>(null);
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
 
-  /* ✅ Optimized scroll handler (throttled using requestAnimationFrame) */
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const portfolioRef = useRef<HTMLElement>(null);
+
+  /* Scroll tracking */
   useEffect(() => {
     let ticking = false;
 
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const totalHeight =
+          const total =
             document.documentElement.scrollHeight - window.innerHeight;
+          setScrollProgress((window.scrollY / total) * 100);
+          setScrollY(window.scrollY);
 
-          const progress = totalHeight > 0
-            ? (window.scrollY / totalHeight) * 100
-            : 0;
+          // Portfolio scroll animation
+          if (portfolioRef.current) {
+            const rect = portfolioRef.current.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+              const items = portfolioRef.current.querySelectorAll('.portfolio-item');
+              const scrollPercentage = 1 - (rect.top / window.innerHeight);
+              
+              items.forEach((item, index) => {
+                const delay = index * 0.1;
+                const element = item as HTMLElement;
+                if (scrollPercentage > 0.1 + delay) {
+                  element.classList.add('animate-fade-in');
+                  element.style.opacity = '1';
+                }
+              });
+            }
+          }
 
-          setScrollProgress(progress);
-          setShowScrollToTop(window.scrollY > 300);
+          // Services scroll animation
+          if (sectionRef.current) {
+            const items = sectionRef.current.querySelectorAll('.service-card');
+            items.forEach((item) => {
+              const rect = item.getBoundingClientRect();
+              if (rect.top < window.innerHeight * 0.8) {
+                item.classList.add('animate-fade-in');
+              }
+            });
+          }
+
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const handlePlayVideo = (id: number) => setActiveVideo(id);
+  const handleCloseVideo = () => setActiveVideo(null);
+
+  const nextTestimonial = () =>
+    setTestimonialIndex((i) => (i === testimonials.length - 1 ? 0 : i + 1));
+
+  const prevTestimonial = () =>
+    setTestimonialIndex((i) => (i === 0 ? testimonials.length - 1 : i - 1));
 
   return (
     <div className="min-h-screen relative">
-
       {/* Scroll Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-50">
         <div
-          className="h-full bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-gold"
+          className="h-full bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-gold transition-all duration-300"
           style={{ width: `${scrollProgress}%` }}
         />
       </div>
 
-      {/* Background Blobs (lighter & fewer) */}
+      {/* Background Blobs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-1/4 left-10 w-24 h-24 bg-chirag-pink/10 blur-xl rounded-full animate-pulse" />
         <div className="absolute bottom-1/3 right-10 w-32 h-32 bg-chirag-peach/10 blur-xl rounded-full animate-pulse" />
       </div>
 
-      {/* Scroll To Top */}
-      <button
-        onClick={scrollToTop}
-        aria-label="Scroll to top"
-        className={`fixed bottom-8 right-8 w-12 h-12 rounded-full bg-gradient-to-r from-chirag-pink to-chirag-peach text-white flex items-center justify-center shadow-lg z-40 transition-all duration-300 ${
-          showScrollToTop
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-10 pointer-events-none'
-        }`}
-      >
-        <ArrowUp size={20} />
-      </button>
-
       <Navbar />
 
-      {/* ✅ Lazy-loaded content */}
       <main className="relative z-10">
-        <Suspense fallback={<PageSkeleton />}>
-          <Hero />
-          <Services />
-          <Portfolio />
-          <Testimonials />
-        </Suspense>
+        {/* ================= HERO ================= */}
+        <section className="pt-28 pb-20 bg-white">
+          <div className="container-custom">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="order-2 lg:order-1 text-center lg:text-left">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-bold leading-tight mb-6">
+                  Where <span className="header-gradient">Art Meets Beauty</span>
+                </h1>
+
+                <p className="text-gray-600 text-lg max-w-xl mx-auto lg:mx-0 mb-6">
+                  Transforming faces through timeless makeup artistry and elegant
+                  henna designs. Experience beauty with Chirag Sharma's signature
+                  touch.
+                </p>
+
+                <div className="relative mb-8 p-4 bg-white/80 backdrop-blur-sm rounded-lg border border-chirag-pink/20 shadow-sm max-w-xl mx-auto lg:mx-0">
+                  <p className="text-chirag-darkPurple/80 italic font-playfair">
+                    "Beauty begins the moment you decide to be yourself."
+                  </p>
+                  <p className="text-right text-sm mt-2 text-chirag-darkPurple/60">
+                    — Chirag's philosophy
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                  
+                    {/* HERO BUTTON FIXED */}
+      <a
+        href="/Catalogue.pdf"
+        download
+        className="button-primary text-center"
+      >
+        Download Catalogue
+      </a>
+                  <Link to="/book" className="button-secondary text-center">
+                    Book Now
+                  </Link>
+                </div>
+              </div>
+
+              <div className="order-1 lg:order-2 flex justify-center">
+                <div className="relative">
+                  <div className="w-[220px] sm:w-[260px] md:w-[300px] lg:w-[500px] xl:w-[580px] 2xl:w-[620px] aspect-square rounded-full overflow-hidden shadow-xl">
+                    <img
+                      src="/photos/chiragicon1.JPG"
+                      alt="Chirag Sharma - Makeup Artist"
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <div className="absolute -bottom-4 -right-4 bg-white px-4 py-2 rounded-full shadow-md border">
+                    <span className="text-sm font-semibold text-gray-800">
+                      9+ Years Experience
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= SERVICES ================= */}
+        <section
+          ref={sectionRef}
+          className="py-20 bg-gradient-to-b from-white to-chirag-pink/5"
+        >
+          <div className="container-custom">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold font-playfair mb-4">
+                Our <span className="header-gradient">Services</span>
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Premium makeup and henna services by Celebrity Makeup Artist Chirag
+                Sharma.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {servicesData.map((service) => (
+                <div
+                  key={service.id}
+                  className="service-card opacity-0 bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all"
+                >
+                  <div className="h-44 mb-4 overflow-hidden rounded-lg">
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+
+                  <h3 className="text-xl font-semibold font-playfair mb-2">
+                    {service.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    {service.description}
+                  </p>
+
+                  <ul className="space-y-2 mb-6">
+                    {service.features.map((f, i) => (
+                      <li key={i} className="flex items-start text-sm">
+                        <CheckCircle
+                          size={16}
+                          className="text-chirag-pink mr-2 mt-1 flex-shrink-0"
+                        />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    to="/services"
+                    className="inline-block font-medium text-chirag-darkPurple border-b-2 border-chirag-pink hover:text-chirag-pink transition-colors"
+                  >
+                    View Details →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ================= PORTFOLIO ================= */}
+        <section ref={portfolioRef} className="py-20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-chirag-pink/10 pointer-events-none" />
+
+          <div
+            className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-chirag-purple/10 to-chirag-pink/10 blur-3xl opacity-70"
+            style={{ transform: `translateY(${scrollY * 0.2}px)` }}
+          />
+
+          <div className="container-custom relative">
+            <div className="text-center mb-16">
+              <div className="inline-block relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-chirag-pink/20 to-chirag-peach/20 blur-xl -m-4 rounded-full" />
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 font-playfair relative">
+                  Featured <span className="header-gradient">Work</span>
+                </h2>
+              </div>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Browse through some of our best makeup transformations and henna
+                designs.
+              </p>
+            </div>
+
+            {/* Image Portfolio */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+              {portfolioItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="portfolio-item group opacity-0"
+                  style={{
+                    transform: `translateY(${activeIndex === index ? -5 : 0}px)`,
+                    transition: "all 0.3s ease-out",
+                  }}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                  <div className="relative overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+
+                    <div className="absolute inset-0 flex flex-col justify-end p-6 transform translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <span className="text-chirag-pink text-sm uppercase tracking-wider mb-1">
+                        {item.category}
+                      </span>
+                      <h3 className="text-white text-xl font-semibold font-playfair">
+                        {item.title}
+                      </h3>
+                      <p className="text-white/80 text-sm mt-2 line-clamp-2">
+                        {item.description}
+                      </p>
+                      <div className="h-0 group-hover:h-8 overflow-hidden transition-all duration-300 mt-2">
+                        <Link
+                          to="/portfolio"
+                          className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm hover:bg-white/30 transition-colors"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Video Portfolio */}
+            <div className="mb-16">
+              <div className="text-center mb-10">
+                <h3 className="text-2xl md:text-3xl font-bold font-playfair relative inline-block">
+                  <span className="relative z-10">Watch Transformations</span>
+                  <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-chirag-pink to-chirag-peach" />
+                </h3>
+                <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
+                  See Chirag's artistry in action through these captivating videos
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {videoPortfolioItems.map((video) => (
+                  <div key={video.id} className="video-portfolio-item group">
+                    <div className="relative overflow-hidden rounded-xl shadow-lg">
+                      <img
+                        src={video.thumbnailUrl}
+                        alt={video.title}
+                        className="w-full h-64 object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                        <button
+                          onClick={() => handlePlayVideo(video.id)}
+                          className="w-16 h-16 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-all duration-300 group-hover:scale-110"
+                        >
+                          <Play size={30} className="text-white fill-white ml-1" />
+                        </button>
+
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                          <a
+                              href={video.instagramLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-chirag-pink to-chirag-peach rounded-full text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+                            >
+                              <Instagram size={18} />
+                              <span>View on Instagram</span>
+                            </a>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80 p-0 overflow-hidden">
+                            <div className="p-4 bg-gradient-to-br from-chirag-pink/20 to-chirag-peach/20">
+                              <p className="text-sm text-gray-700">
+                                See more beautiful transformations and behind-the-scenes
+                                content on Chirag's Instagram profile.
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 w-full p-4">
+                        <h4 className="text-white font-playfair text-xl">
+                          {video.title}
+                        </h4>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Video Modal */}
+            {activeVideo && (
+              <div
+                className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+                onClick={handleCloseVideo}
+              >
+                <div
+                  className="max-w-4xl w-full bg-white rounded-2xl overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="relative pt-[56.25%] w-full">
+                    <iframe
+                      src={
+                        videoPortfolioItems.find((v) => v.id === activeVideo)
+                          ?.videoUrl
+                      }
+                      className="absolute inset-0 w-full h-full border-0"
+                      allowFullScreen
+                      title="Instagram video"
+                    />
+                  </div>
+                  <div className="p-4 flex justify-between items-center">
+                    <h3 className="font-playfair text-xl text-gray-800">
+                      {
+                        videoPortfolioItems.find((v) => v.id === activeVideo)
+                          ?.title
+                      }
+                    </h3>
+                    <button
+                      onClick={handleCloseVideo}
+                      className="p-2 rounded-full hover:bg-gray-100"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center mt-12">
+              <Link
+                to="/portfolio"
+                className="button-primary relative group overflow-hidden"
+              >
+                <span className="absolute inset-0 w-0 bg-gradient-to-r from-chirag-peach to-chirag-pink group-hover:w-full transition-all duration-700" />
+                <span className="relative z-10">Explore Full Portfolio</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= TESTIMONIALS ================= */}
+        <section className="py-20 bg-chirag-pink/5">
+          <div className="container-custom relative">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-playfair">
+                Client <span className="header-gradient">Testimonials</span>
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Hear what our clients have to say about their experience working
+                with Chirag Sharma.
+              </p>
+            </div>
+
+            <div className="relative">
+              <div className="overflow-hidden">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${testimonialIndex * 100}%)` }}
+                >
+                  {testimonials.map((testimonial) => (
+                    <div
+                      key={testimonial.id}
+                      className="w-full flex-shrink-0 px-4"
+                    >
+                      <div className="testimonial-card max-w-3xl mx-auto text-center">
+                        <div className="w-20 h-20 mx-auto mb-6 overflow-hidden rounded-full border-4 border-chirag-pink/20">
+                          <img
+                            src={testimonial.image}
+                            alt={testimonial.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <div className="flex justify-center mb-4">
+                          {Array.from({ length: testimonial.rating }).map(
+                            (_, i) => (
+                              <Star
+                                key={i}
+                                size={20}
+                                className="fill-chirag-gold text-chirag-gold"
+                              />
+                            )
+                          )}
+                        </div>
+
+                        <blockquote className="text-lg md:text-xl text-gray-700 italic mb-6">
+                          "{testimonial.quote}"
+                        </blockquote>
+
+                        <cite className="block not-italic">
+                          <span className="block text-lg font-semibold font-playfair text-chirag-darkPurple">
+                            {testimonial.name}
+                          </span>
+                          <span className="text-chirag-gray">
+                            {testimonial.role}
+                          </span>
+                        </cite>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={prevTestimonial}
+                className="absolute left-0 top-1/2 -translate-y-1/2 bg-white p-3 rounded-full shadow-md hover:bg-chirag-pink/10 transition-colors z-10"
+                aria-label="Previous testimonial"
+              >
+                <ChevronLeft size={20} className="text-chirag-darkPurple" />
+              </button>
+
+              <button
+                onClick={nextTestimonial}
+                className="absolute right-0 top-1/2 -translate-y-1/2 bg-white p-3 rounded-full shadow-md hover:bg-chirag-pink/10 transition-colors z-10"
+                aria-label="Next testimonial"
+              >
+                <ChevronRight size={20} className="text-chirag-darkPurple" />
+              </button>
+            </div>
+
+            <div className="flex justify-center mt-8">
+              {testimonials.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setTestimonialIndex(index)}
+                  className={`w-3 h-3 mx-1 rounded-full transition-all ${
+                    index === testimonialIndex
+                      ? "bg-chirag-pink scale-125"
+                      : "bg-gray-300 hover:bg-chirag-pink/50"
+                  }`}
+                  aria-label={`Go to testimonial ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />
@@ -91,10 +692,3 @@ const Index = () => {
 };
 
 export default Index;
-
-/* ---------------- Skeleton Loader ---------------- */
-const PageSkeleton = () => (
-  <div className="min-h-[60vh] flex items-center justify-center">
-    <div className="w-16 h-16 rounded-full border-4 border-chirag-pink/30 border-t-chirag-pink animate-spin" />
-  </div>
-);
