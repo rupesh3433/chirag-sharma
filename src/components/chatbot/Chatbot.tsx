@@ -213,30 +213,30 @@ const Chatbot = () => {
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     const controller = new AbortController();
     abortRef.current = controller;
-  
+
     try {
       // CRITICAL: If user shows ANY booking intent, switch to agent mode IMMEDIATELY
       let shouldUseAgent = chatMode === "agent" || agentState.sessionId;
-      
+
       // Enhanced booking detection
       const hasBookingIntent = detectBookingIntent(userMessage);
       const hasNumericSelection = /\b[1-4]\b/.test(userMessage.toLowerCase());
-      const contextHasServices = messages.some(m => 
-        m.role === "assistant" && m.content.includes("1. Bridal")
+      const contextHasServices = messages.some(
+        (m) => m.role === "assistant" && m.content.includes("1. Bridal")
       );
-      
+
       // If user is selecting from a list (1, 2, 3, 4) in context of services
       if (hasNumericSelection && contextHasServices && !shouldUseAgent) {
         shouldUseAgent = true;
         setChatMode("agent");
       }
-      
+
       // If user explicitly says booking-related things
       if (hasBookingIntent && !shouldUseAgent) {
         shouldUseAgent = true;
         setChatMode("agent");
       }
-  
+
       let endpoint = "/chat";
       let payload: any = {
         messages: newMessages.map((msg) => ({
@@ -245,7 +245,7 @@ const Chatbot = () => {
         })),
         language,
       };
-  
+
       if (shouldUseAgent) {
         endpoint = "/agent/chat";
         payload = {
@@ -254,19 +254,26 @@ const Chatbot = () => {
           language,
         };
       }
-  
+
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-  
+
       if (!res.ok) throw new Error(`API error: ${res.status}`);
-  
+
       if (shouldUseAgent) {
         const data: AgentResponse = await res.json();
-        
+
+        // Debug log
+        console.log("Backend response:", {
+          stage: data.stage,
+          chat_mode: data.chat_mode,
+          action: data.action,
+        });
+
         // Update agent state
         setAgentState({
           sessionId: data.session_id,
@@ -274,17 +281,19 @@ const Chatbot = () => {
           missingFields: data.missing_fields || [],
           bookingId: data.booking_id,
         });
-        
+
         // Force agent mode if backend says so
         if (data.chat_mode === "agent") {
           setChatMode("agent");
+        } else {
+          setChatMode("simple");
         }
-        
+
         setMessages([
           ...newMessages,
           { role: "assistant", content: data.reply },
         ]);
-        
+
         if (data.action === "booking_confirmed") {
           setTimeout(() => {
             setChatMode("simple");
@@ -300,7 +309,6 @@ const Chatbot = () => {
             );
           }, 1000);
         }
-        
       } else {
         const data = await res.json();
         setMessages([
@@ -407,6 +415,7 @@ const Chatbot = () => {
   const getStageDisplayText = (stage: string): string => {
     const stages: Record<string, string> = {
       greeting: "👋 Welcome",
+      info_mode: "💬 Information Mode", // ADD THIS
       selecting_service: "🎯 Selecting service",
       selecting_package: "📦 Choosing package",
       collecting_details: "📝 Collecting details",
@@ -415,6 +424,7 @@ const Chatbot = () => {
       collecting_info: "📝 Collecting details",
       otp_verification: "🔐 Verifying OTP",
       confirmed: "✅ Booking confirmed",
+      completed: "✅ Booking completed",
     };
     return stages[stage] || stage;
   };
@@ -710,7 +720,9 @@ const Chatbot = () => {
           {/* Stage Indicator */}
           {chatMode === "agent" &&
             agentState.stage !== "greeting" &&
-            agentState.stage !== "confirmed" && (
+            agentState.stage !== "info_mode" && // ADD THIS
+            agentState.stage !== "confirmed" &&
+            agentState.stage !== "completed" && (
               <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-200 px-4 py-2">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
