@@ -1,144 +1,181 @@
-import React,  { useState } from "react";
+import React, { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Award, Star, Trophy, Medal, Sparkles } from "lucide-react";
-import { Mail, Phone, MapPin, Instagram, MessageSquare, Check, Send } from 'lucide-react';
+import {
+  Award,
+  Trophy,
+  Medal,
+  Sparkles,
+  Heart,
+  Mail,
+  Phone,
+  MapPin,
+  MessageSquare,
+  Check,
+  Send,
+  Star,
+  Users,
+  Palette,
+  Zap,
+  Target,
+} from "lucide-react";
 import { toast } from "sonner";
 
+/* ================= COMPONENT ================= */
 
 const About = () => {
   const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        service: '',
-        message: '',
-      });
-    
-      const [isSubmitting, setIsSubmitting] = useState(false);
-      const [formSubmitted, setFormSubmitted] = useState(false);
-    
-      const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-      ) => {
-        setFormData({
-          ...formData,
-          [e.target.name]: e.target.value
-        });
-      };
-    
-      const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-    
-        setTimeout(() => {
-          console.log('Form submitted:', formData);
-          toast.success("Your message has been sent! We'll get back to you soon.");
-          setFormSubmitted(true);
-          setIsSubmitting(false);
-    
-          setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            service: '',
-            message: '',
-          });
-    
-          setTimeout(() => setFormSubmitted(false), 5000);
-        }, 1000);
-      };
+    name: "",
+    email: "",
+    phone: "",
+    service: "",
+    message: "",
+  });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    setTimeout(() => {
+      toast.success("Your message has been sent! We'll get back to you soon.");
+      setFormSubmitted(true);
+      setIsSubmitting(false);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        service: "",
+        message: "",
+      });
+      setTimeout(() => setFormSubmitted(false), 5000);
+    }, 1000);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-pink-50/30 via-white to-purple-50/30">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Navbar />
 
       <main className="flex-grow">
-
         {/* ================= HERO ================= */}
-        <section className="pt-32 pb-16 bg-gradient-to-br from-pink-100/40 via-purple-50/30 to-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(236,72,153,0.1),transparent_50%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(168,85,247,0.08),transparent_50%)]" />
+        <section className="pt-32 pb-20 bg-gradient-to-br from-chirag-pink/10 via-background to-chirag-peach/10 relative overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-chirag-pink/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-chirag-peach/20 rounded-full blur-3xl" />
 
-          <div className="container mx-auto max-w-7xl px-4 relative text-center">
-            <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full mb-6 shadow border border-pink-200/50">
-              <Sparkles className="w-4 h-4 text-pink-500" />
-              <span className="text-sm font-medium text-gray-700">
-                Beauty Artist & Creative Visionary
-              </span>
+          <div className="container-custom text-center max-w-4xl mx-auto relative z-10">
+            <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-chirag-pink/30 border border-chirag-pink/40 shadow-lg">
+              <Sparkles className="w-10 h-10 text-chirag-darkPurple" />
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6">
-              About{" "}
-              <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Chirag Sharma
-              </span>
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6">
+              About <span className="header-gradient">Chirag Sharma</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-medium">
               A journey of passion, artistry, and dedication to transforming
-              beauty into an unforgettable experience
+              beauty into an unforgettable experience.
             </p>
+
+            <div className="mt-14 flex flex-wrap justify-center gap-6">
+              <Badge icon={Star} label="5.0 Rating" />
+              <Badge icon={Users} label="1000+ Clients" />
+              <Badge icon={Award} label="50+ Awards" />
+            </div>
           </div>
         </section>
 
         {/* ================= BIO ================= */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto max-w-7xl px-4 grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <h2 className="text-4xl font-bold">The Journey Begins</h2>
+        <section className="py-24 bg-background">
+          <div className="container-custom grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <h2 className="text-5xl font-bold">
+                The <span className="header-gradient">Journey</span> Begins
+              </h2>
 
-              <p className="text-gray-600 border-l-4 pl-4 border-pink-200">
-                My beauty journey started over{" "}
-                <span className="font-semibold text-pink-600">9+ years ago</span>{" "}
-                with a deep fascination for colors, creativity, and
-                transformation.
+              <p className="border-l-4 border-chirag-pink pl-6 font-medium text-enhanced-contrast">
+                My beauty journey started over <b>9+ years ago</b> with a deep
+                fascination for colors, creativity, and transformation.
               </p>
 
-              <p className="text-gray-600 border-l-4 pl-4 border-purple-200">
+              <p className="border-l-4 border-chirag-peach pl-6 font-medium text-enhanced-contrast">
                 After professional training and collaborations with industry
                 leaders and celebrities, I developed a signature style blending
                 timeless elegance with modern trends.
               </p>
 
-              <p className="text-gray-600 border-l-4 pl-4 border-pink-200">
+              <p className="border-l-4 border-chirag-pink pl-6 font-medium text-enhanced-contrast">
                 Today, I specialize in bridal, editorial, and creative makeup
                 artistry, complemented by intricate henna designs.
               </p>
 
-              {/* Stats */}
               <div className="grid grid-cols-3 gap-4 pt-6">
-                <Stat value="9+" label="Years Experience" />
-                <Stat value="1000+" label="Happy Clients" />
-                <Stat value="50+" label="Awards Won" />
+                <Stat value="9+" label="Years Experience" icon={Target} />
+                <Stat value="1000+" label="Happy Clients" icon={Users} />
+                <Stat value="50+" label="Awards Won" icon={Trophy} />
               </div>
             </div>
 
-            {/* Real Image */}
             <div className="relative max-w-md mx-auto">
-              <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-pink-400/30 via-purple-400/30 to-pink-400/30 blur-3xl animate-pulse" />
+              <div className="absolute -inset-8 rounded-3xl bg-chirag-pink/25 blur-3xl animate-image-glow" />
               <img
                 src="/photos/chiragicon2.JPG"
                 alt="Chirag Sharma"
-                className="relative z-10 rounded-3xl shadow-2xl w-full border-4 border-white object-cover aspect-[3/4]"
+                className="relative rounded-3xl shadow-2xl border-4 border-white object-cover aspect-[3/4]"
               />
+              <div className="absolute -bottom-6 -right-6 bg-white px-6 py-4 rounded-2xl shadow-xl border">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-chirag-pink fill-chirag-pink" />
+                  <span className="font-bold">Certified Artist</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ================= TIMELINE (ENHANCED ONLY VISUALLY) ================= */}
-        <section className="py-24 bg-gradient-to-b from-white to-pink-50/30">
-          <div className="container mx-auto max-w-6xl px-4">
-            <h2 className="text-4xl font-bold text-center mb-20">
-              Professional{" "}
-              <span className="text-pink-500">Milestones</span>
-            </h2>
+        {/* ================= PHILOSOPHY ================= */}
+        <section className="py-24 bg-muted/40">
+          <div className="container-custom max-w-6xl">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-bold">
+                My <span className="header-gradient">Philosophy</span>
+              </h2>
+              <p className="text-muted-foreground text-xl">
+                Core values that guide every brushstroke
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <PhilosophyCard icon={Palette} title="Artistry First" />
+              <PhilosophyCard icon={Heart} title="Client Connection" />
+              <PhilosophyCard icon={Zap} title="Innovation" />
+            </div>
+          </div>
+        </section>
+
+        {/* ================= PROFESSIONAL MILESTONES ================= */}
+        <section className="py-24 bg-background">
+          <div className="container-custom max-w-6xl">
+            <div className="text-center mb-20">
+              <h2 className="text-5xl font-bold">
+                Professional <span className="header-gradient">Milestones</span>
+              </h2>
+              <p className="text-muted-foreground text-xl">
+                A decade of dedication, growth, and artistic excellence.
+              </p>
+            </div>
 
             <div className="relative">
-              <div className="hidden md:block absolute left-1/2 top-0 h-full w-1 bg-gradient-to-b from-pink-300 via-purple-300 to-pink-300 -translate-x-1/2 opacity-40" />
+              <div className="hidden md:block absolute left-1/2 top-0 h-full w-1 bg-chirag-pink/40 -translate-x-1/2 rounded-full" />
 
-              <div className="space-y-16">
+              <div className="space-y-20">
                 {timeline.map((item, i) => (
                   <div
                     key={i}
@@ -147,21 +184,21 @@ const About = () => {
                     }`}
                   >
                     <div className="md:w-1/2 px-6">
-                      <div className="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-pink-100">
-                        <span className="inline-block mb-3 px-4 py-1 rounded-full bg-gradient-to-r from-pink-400 to-purple-400 text-white font-bold text-sm">
+                      <div className="service-card hover-lift">
+                        <span className="inline-block mb-4 px-4 py-2 rounded-full bg-chirag-pink text-chirag-darkPurple font-bold">
                           {item.year}
                         </span>
                         <h3 className="text-2xl font-bold mb-2">
                           {item.title}
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-muted-foreground font-medium">
                           {item.description}
                         </p>
                       </div>
                     </div>
 
-                    <div className="hidden md:flex absolute left-1/2 top-10 -translate-x-1/2 w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-purple-400 shadow-xl items-center justify-center">
-                      <div className="w-4 h-4 rounded-full bg-white" />
+                    <div className="hidden md:flex absolute left-1/2 top-10 -translate-x-1/2 w-12 h-12 rounded-2xl bg-chirag-pink shadow-xl items-center justify-center ring-4 ring-background">
+                      <div className="w-3 h-3 rounded-full bg-chirag-darkPurple" />
                     </div>
                   </div>
                 ))}
@@ -170,202 +207,68 @@ const About = () => {
           </div>
         </section>
 
-        {/* ================= AWARDS (SAME CONTENT, BETTER INTERACTION) ================= */}
-        <section className="py-24 bg-gradient-to-b from-pink-50/30 to-white">
-          <div className="container mx-auto max-w-6xl px-4">
-            <h2 className="text-4xl font-bold text-center mb-16">
-              Awards & <span className="text-pink-500">Recognition</span>
-            </h2>
+        {/* ================= GET IN TOUCH ================= */}
+        <section className="py-24 bg-muted/40">
+          <div className="container-custom max-w-6xl">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-bold">
+                Get in <span className="header-gradient">Touch</span>
+              </h2>
+              <p className="text-muted-foreground text-xl">
+                Have questions or want to book a consultation?
+              </p>
+            </div>
 
-            <div className="grid md:grid-cols-3 gap-10">
-              <AwardCard
-                icon={Trophy}
-                title="Best Bridal Makeup Artist"
-                color="from-yellow-400 to-orange-400"
-              />
-              <AwardCard
-                icon={Award}
-                title="Innovation in Makeup"
-                color="from-pink-400 to-rose-400"
-              />
-              <AwardCard
-                icon={Medal}
-                title="Master Henna Artist"
-                color="from-purple-400 to-indigo-400"
-              />
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              <ContactCard icon={Mail} title="Email" value="jinni.chirag.mua101@gmail.com" href="mailto:jinni.chirag.mua101@gmail.com" />
+              <ContactCard icon={Phone} title="Call" value="+977 9707613340" href="tel:+9779707613340" />
+              <ContactCard icon={MessageSquare} title="WhatsApp" value="Message Us" href="https://wa.me/9779707613340" />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-12">
+              <div className="testimonial-card">
+                <h3 className="text-3xl font-bold mb-6 flex items-center">
+                  <Send className="mr-3 text-chirag-pink" />
+                  Send Message
+                </h3>
+
+                {formSubmitted && (
+                  <div className="bg-green-50 border border-green-300 p-4 rounded-xl mb-6 flex items-center">
+                    <Check className="mr-2 text-green-600" />
+                    Message sent successfully!
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <input className="form-input" name="name" placeholder="Name" value={formData.name} onChange={handleChange} required />
+                  <input className="form-input" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required />
+                  <textarea className="form-input" rows={4} name="message" placeholder="Message" value={formData.message} onChange={handleChange} required />
+                  <button className="button-primary w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Sending..." : "Send Message"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="testimonial-card">
+                <h3 className="text-3xl font-bold mb-4 flex items-center">
+                  <MapPin className="mr-3 text-chirag-pink" />
+                  Visit Studio
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Lahan, Siraha District, Madhesh Province, Nepal
+                </p>
+                <iframe
+                  src="https://www.google.com/maps?q=Lahan,Nepal&output=embed"
+                  width="100%"
+                  height="320"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
         </section>
-
       </main>
-
-
-      {/* Below Are COntacts Section */}
-
-      <div className="min-h-screen">
-
-      {/* Hero */}
-      <section className="pt-32 pb-16 bg-gradient-to-b from-chirag-pink/10 to-white">
-        <div className="container-custom text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 font-playfair">
-            Get in <span className="text-chirag-pink">Touch</span>
-          </h1>
-          <p className="text-lg text-gray-600">
-            Have questions or want to book a consultation? We’d love to hear from you.
-          </p>
-        </div>
-      </section>
-
-      {/* Contact Cards */}
-      <section className="py-16 bg-white">
-        <div className="container-custom">
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-
-            {/* Email */}
-            <div className="p-8 rounded-xl shadow-md text-center border">
-              <Mail size={28} className="mx-auto mb-4 text-chirag-darkPurple" />
-              <h3 className="font-semibold mb-2">Email Us</h3>
-              <a
-                href="mailto:jinni.chirag.mua101@gmail.com"
-                className="text-gray-600 hover:text-chirag-pink"
-              >
-                jinni.chirag.mua101@gmail.com
-              </a>
-            </div>
-
-            {/* Phone */}
-            <div className="p-8 rounded-xl shadow-md text-center border">
-              <Phone size={28} className="mx-auto mb-4 text-chirag-darkPurple" />
-              <h3 className="font-semibold mb-2">Call Us</h3>
-              <a
-                href="tel:+9779707613340"
-                className="text-gray-600 hover:text-chirag-pink"
-              >
-                +977 9707613340
-              </a>
-            </div>
-
-            {/* WhatsApp */}
-            <div className="p-8 rounded-xl shadow-md text-center border">
-              <MessageSquare size={28} className="mx-auto mb-4 text-chirag-darkPurple" />
-              <h3 className="font-semibold mb-2">WhatsApp</h3>
-              <a
-                href="https://wa.me/9779707613340"
-                target="_blank"
-                rel="noreferrer"
-                className="text-gray-600 hover:text-chirag-pink"
-              >
-                Message on WhatsApp
-              </a>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-
-            {/* Contact Form */}
-            <div className="p-8 rounded-xl shadow-lg border">
-              <h2 className="text-2xl font-bold mb-6 flex items-center">
-                <Send size={20} className="mr-2 text-chirag-pink" />
-                Send Us a Message
-              </h2>
-
-              {formSubmitted && (
-                <div className="bg-green-50 border p-4 rounded mb-6 flex items-center">
-                  <Check size={18} className="mr-2 text-green-600" />
-                  Message sent successfully!
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit}>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Your Name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="form-input mb-4"
-                />
-
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="form-input mb-4"
-                />
-
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="Phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="form-input mb-4"
-                />
-
-                <select
-                  name="service"
-                  value={formData.service}
-                  onChange={handleChange}
-                  className="form-input mb-4"
-                >
-                  <option value="">Select Service</option>
-                  <option value="bridal">Bridal Makeup</option>
-                  <option value="party">Party Makeup</option>
-                  <option value="editorial">Editorial Makeup</option>
-                  <option value="henna">Henna Art</option>
-                </select>
-
-                <textarea
-                  name="message"
-                  rows={4}
-                  placeholder="Your Message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  className="form-input mb-4"
-                />
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="button-primary w-full"
-                >
-                  {isSubmitting ? "Sending..." : "Send Message"}
-                </button>
-              </form>
-            </div>
-
-            {/* Map */}
-            <div className="p-8 rounded-xl shadow-lg border">
-              <h2 className="text-2xl font-bold mb-4 flex items-center">
-                <MapPin size={20} className="mr-2 text-chirag-pink" />
-                Visit Our Studio
-              </h2>
-
-              <p className="mb-4 text-gray-600">
-                Lahan, Siraha District, Madhesh Province, Nepal
-              </p>
-
-              <iframe
-                src="https://www.google.com/maps?q=Lahan,Nepal&output=embed"
-                width="100%"
-                height="300"
-                style={{ border: 0 }}
-                loading="lazy"
-                allowFullScreen
-                title="Lahan Nepal"
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </div>
 
       <Footer />
     </div>
@@ -376,22 +279,36 @@ export default About;
 
 /* ================= HELPERS ================= */
 
-const Stat = ({ value, label }: any) => (
-  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100">
-    <div className="text-3xl font-bold text-pink-600">{value}</div>
-    <div className="text-sm text-gray-600">{label}</div>
+const Badge = ({ icon: Icon, label }: any) => (
+  <div className="flex items-center gap-2 bg-white px-5 py-3 rounded-full shadow border">
+    <Icon className="text-chirag-pink" />
+    <span className="font-bold">{label}</span>
   </div>
 );
 
-const AwardCard = ({ icon: Icon, title, color }: any) => (
-  <div className="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-pink-100 text-center">
-    <div
-      className={`w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center shadow-xl group-hover:rotate-12 transition-transform`}
-    >
-      <Icon className="w-10 h-10 text-white" />
-    </div>
-    <h3 className="text-xl font-bold">{title}</h3>
+const Stat = ({ value, label, icon: Icon }: any) => (
+  <div className="text-center p-6 bg-white rounded-2xl shadow-md border hover-lift">
+    <Icon className="w-8 h-8 mx-auto mb-2 text-chirag-pink" />
+    <div className="text-4xl font-bold">{value}</div>
+    <div className="text-sm font-semibold">{label}</div>
   </div>
+);
+
+const PhilosophyCard = ({ icon: Icon, title }: any) => (
+  <div className="service-card text-center hover-lift">
+    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-chirag-pink flex items-center justify-center shadow">
+      <Icon className="w-10 h-10 text-chirag-darkPurple" />
+    </div>
+    <h3 className="text-2xl font-bold">{title}</h3>
+  </div>
+);
+
+const ContactCard = ({ icon: Icon, title, value, href }: any) => (
+  <a href={href} className="service-card text-center hover-lift block">
+    <Icon className="mx-auto mb-4 text-chirag-pink" size={32} />
+    <h4 className="font-bold">{title}</h4>
+    <p className="font-medium">{value}</p>
+  </a>
 );
 
 const timeline = [
