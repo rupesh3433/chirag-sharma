@@ -172,7 +172,7 @@ const InstagramVideos = ({
         onTouchEnd={onTouchEnd}
       >
         <div
-          className="flex transition-transform duration-500 ease-out"
+          className="flex transition-transform duration-500 ease-out pb-10"
           style={{
             transform: `translateX(-${(100 / visibleCount) * index}%)`,
           }}

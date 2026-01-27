@@ -194,13 +194,9 @@ export default function Book() {
         {/* HERO — INDEX ALIGNED */}
         <section className="pt-28 pb-5 bg-white">
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <div
-              className="inline-flex items-center justify-center w-[80px] h-[80px] mb-5 rounded-full
-  bg-gradient-to-br from-chirag-pink/30 to-chirag-gold/30
-  border border-chirag-pink/50 shadow-md"
-            >
-              <Sparkles className="w-[46px] h-[46px] text-chirag-gold/90" />
-            </div>
+           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-full bg-chirag-pink/30 border border-chirag-pink/40 shadow-lg">
+                         <Sparkles className="w-10 h-10 text-chirag-darkPurple" />
+                       </div>
 
             <h1 className="text-4xl sm:text-5xl font-playfair font-bold mb-6">
               Book Your <span className="header-gradient">Service</span>

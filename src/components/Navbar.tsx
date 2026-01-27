@@ -43,14 +43,14 @@ const Navbar = () => {
           {/* LOGO */}
           <Link to="/" className="flex items-center gap-2 group">
             <h1 className="text-2xl sm:text-3xl font-playfair font-bold leading-none">
-              <span className="text-chirag-darkPurple">Chirag</span>{" "}
-              <span className="bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-pink bg-clip-text text-transparent">
+              <span className="text-chirag-darkPurple group-hover:text-chirag-peach">Chirag</span>{" "}
+              <span className="bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-pink group-hover:text-chirag-darkPurple bg-clip-text text-transparent">
                 Sharma
               </span>
             </h1>
 
             {/* Sparkle icon – always visible */}
-            <Sparkles className="w-4 h-4 text-chirag-pink group-hover:text-chirag-peach transition-colors duration-200" />
+            <Sparkles className="w-4 h-4 text-chirag-pink group-hover:text-chirag-darkPurple transition-colors duration-200" />
           </Link>
 
           {/* DESKTOP MENU */}
