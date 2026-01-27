@@ -71,7 +71,7 @@ const About = () => {
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-chirag-peach/20 rounded-full blur-3xl" />
 
           <div className="container-custom text-center max-w-4xl mx-auto relative z-10">
-            <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-chirag-pink/30 border border-chirag-pink/40 shadow-lg">
+            <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-gradient-to-br from-chirag-pink to-pink-200 border border-chirag-pink/40 shadow-lg">
               <Sparkles className="w-10 h-10 text-chirag-darkPurple" />
             </div>
 

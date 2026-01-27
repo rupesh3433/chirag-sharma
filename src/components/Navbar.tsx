@@ -66,7 +66,7 @@ const Navbar = () => {
               className="
                 px-6 py-2 rounded-full
                 font-semibold text-sm
-                bg-chirag-pink/80
+               bg-gradient-to-br from-chirag-pink to-pink-200
                 text-chirag-darkPurple
                 shadow-sm
                 transition-all duration-200
