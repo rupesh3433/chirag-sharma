@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -29,96 +29,76 @@ const categories = [
 ];
 
 /* =======================
-   PHOTO PORTFOLIO DATA
+   PHOTO DATA
 ======================= */
 const portfolioItems: PortfolioItem[] = [
-  {
-    id: 1,
-    title: "Traditional Bridal Look",
-    category: "bridal",
-    image: "/photos/chirag1.PNG",
-    description:
-      "Classic bridal makeup with traditional elegance and modern sophistication.",
-  },
-  {
-    id: 2,
-    title: "Modern Bride",
-    category: "bridal",
-    image: "/photos/chirag2.PNG",
-    description: "Contemporary bridal look with soft glam and natural radiance.",
-  },
-  {
-    id: 3,
-    title: "Royal Elegance",
-    category: "bridal",
-    image: "/photos/chirag3.PNG",
-    description:
-      "Regal bridal makeup celebrating timeless beauty and cultural heritage.",
-  },
-  {
-    id: 4,
-    title: "Bold Editorial",
-    category: "editorial",
-    image: "/photos/chirag1.PNG",
-    description:
-      "Striking colors and graphic liner for high-fashion magazine shoot.",
-  },
-  {
-    id: 5,
-    title: "Avant-Garde",
-    category: "editorial",
-    image: "/photos/chirag2.PNG",
-    description:
-      "Artistic and experimental makeup for creative conceptual photography.",
-  },
-  {
-    id: 6,
-    title: "Glam Party Look",
-    category: "party",
-    image: "/photos/chirag3.PNG",
-    description:
-      "Glamorous evening makeup with smoky eyes for special celebrations.",
-  },
-  {
-    id: 7,
-    title: "Festive Glamour",
-    category: "party",
-    image: "/photos/chirag1.PNG",
-    description:
-      "Vibrant and colorful party makeup perfect for festive occasions.",
-  },
-  {
-    id: 8,
-    title: "Bridal Henna",
-    category: "henna",
-    image: "/photos/chirag2.PNG",
-    description:
-      "Intricate traditional bridal henna with detailed patterns and motifs.",
-  },
-  {
-    id: 9,
-    title: "Modern Henna Design",
-    category: "henna",
-    image: "/photos/chirag3.PNG",
-    description:
-      "Contemporary henna patterns with modern geometric elements.",
-  },
+  { id: 1, title: "Traditional Bridal Look", category: "bridal", image: "/photos/chirag1.PNG", description: "" },
+  { id: 2, title: "Modern Bride Elegance", category: "bridal", image: "/photos/chirag2.PNG", description: "" },
+  { id: 3, title: "Royal Wedding Glam", category: "bridal", image: "/photos/chirag3.PNG", description: "" },
+  { id: 4, title: "Classic Red Bridal", category: "bridal", image: "/photos/chirag1.PNG", description: "" },
+  { id: 5, title: "Soft Glam Bride", category: "bridal", image: "/photos/chirag2.PNG", description: "" },
+  { id: 6, title: "North Indian Bridal Look", category: "bridal", image: "/photos/chirag3.PNG", description: "" },
+  { id: 7, title: "South Indian Bridal Style", category: "bridal", image: "/photos/chirag1.PNG", description: "" },
+  { id: 8, title: "Minimal Bridal Makeup", category: "bridal", image: "/photos/chirag2.PNG", description: "" },
+
+  { id: 9, title: "Bold Editorial Glam", category: "editorial", image: "/photos/chirag3.PNG", description: "" },
+  { id: 10, title: "High Fashion Editorial", category: "editorial", image: "/photos/chirag1.PNG", description: "" },
+  { id: 11, title: "Magazine Cover Look", category: "editorial", image: "/photos/chirag2.PNG", description: "" },
+  { id: 12, title: "Avant-Garde Editorial", category: "editorial", image: "/photos/chirag3.PNG", description: "" },
+  { id: 13, title: "Runway Inspired Makeup", category: "editorial", image: "/photos/chirag1.PNG", description: "" },
+  { id: 14, title: "Creative Editorial Shoot", category: "editorial", image: "/photos/chirag2.PNG", description: "" },
+  { id: 15, title: "Studio Fashion Look", category: "editorial", image: "/photos/chirag3.PNG", description: "" },
+
+  { id: 16, title: "Glam Party Look", category: "party", image: "/photos/chirag1.PNG", description: "" },
+  { id: 17, title: "Cocktail Party Glam", category: "party", image: "/photos/chirag2.PNG", description: "" },
+  { id: 18, title: "Evening Reception Look", category: "party", image: "/photos/chirag3.PNG", description: "" },
+  { id: 19, title: "Festive Party Makeup", category: "party", image: "/photos/chirag1.PNG", description: "" },
+  { id: 20, title: "Sangeet Night Glam", category: "party", image: "/photos/chirag2.PNG", description: "" },
+  { id: 21, title: "Engagement Party Look", category: "party", image: "/photos/chirag3.PNG", description: "" },
+  { id: 22, title: "Birthday Party Makeup", category: "party", image: "/photos/chirag1.PNG", description: "" },
+
+  { id: 23, title: "Traditional Bridal Henna", category: "henna", image: "/photos/chirag2.PNG", description: "" },
+  { id: 24, title: "Modern Henna Design", category: "henna", image: "/photos/chirag3.PNG", description: "" },
+  { id: 25, title: "Arabic Henna Style", category: "henna", image: "/photos/chirag1.PNG", description: "" },
+  { id: 26, title: "Minimal Henna Art", category: "henna", image: "/photos/chirag2.PNG", description: "" },
+  { id: 27, title: "Full Hand Bridal Henna", category: "henna", image: "/photos/chirag3.PNG", description: "" },
+  { id: 28, title: "Contemporary Henna Pattern", category: "henna", image: "/photos/chirag1.PNG", description: "" },
+  { id: 29, title: "Festival Henna Design", category: "henna", image: "/photos/chirag2.PNG", description: "" },
+  { id: 30, title: "Custom Henna Artwork", category: "henna", image: "/photos/chirag3.PNG", description: "" },
 ];
 
 /* =======================
    COMPONENT
 ======================= */
 const Portfolio = () => {
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [selectedItem, setSelectedItem] =
     useState<PortfolioItem | null>(null);
 
-  const photoItems =
+  /* 🔥 ROW-BASED PAGINATION STATE */
+  const [visibleRows, setVisibleRows] = useState(2);
+
+  /* Reset rows on category change */
+  useEffect(() => {
+    setVisibleRows(2);
+  }, [activeCategory]);
+
+  /* Filter photos */
+  const filteredPhotos =
     activeCategory === "all"
       ? portfolioItems
       : portfolioItems.filter(
           (item) => item.category === activeCategory
         );
+
+  /* Columns per breakpoint */
+  const columns =
+    window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3;
+
+  const itemsPerPage = visibleRows * columns;
+  const visiblePhotos = filteredPhotos.slice(0, itemsPerPage);
+
+  const hasMore = visiblePhotos.length < filteredPhotos.length;
 
   const showVideos =
     activeCategory === "all" || activeCategory === "video";
@@ -130,30 +110,27 @@ const Portfolio = () => {
       {/* ================= HERO ================= */}
       <section className="pt-32 pb-16 bg-gradient-to-b from-chirag-pink/10 to-white">
         <div className="container-custom text-center max-w-3xl mx-auto px-4">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 font-playfair">
-            Our{" "}
-            <span className="bg-gradient-to-r from-chirag-darkPurple to-chirag-pink bg-clip-text text-transparent">
-              Portfolio
-            </span>
+          <h1 className="text-4xl font-playfair font-bold mb-4">
+            Our <span className="header-gradient">Portfolio</span>
           </h1>
           <p className="text-gray-600">
-            Explore our collection of makeup transformations and artistic
-            creations.
+            Explore our makeup transformations and artistic creations.
           </p>
         </div>
       </section>
 
-      {/* ================= FILTERS ================= */}
-      <section className="py-8 bg-white">
+      {/* ================= CONTENT ================= */}
+      <section className="py-10 bg-white">
         <div className="container-custom px-4">
+          {/* Filters */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-6 py-2 rounded-full transition-all ${
+                className={`px-6 py-2 rounded-full transition ${
                   activeCategory === cat.id
-                    ? "bg-chirag-pink text-chirag-darkPurple shadow-md"
+                    ? "bg-chirag-pink text-chirag-darkPurple shadow"
                     : "bg-gray-100 text-gray-600 hover:bg-chirag-pink/20"
                 }`}
               >
@@ -164,40 +141,53 @@ const Portfolio = () => {
 
           {/* ================= PHOTO GRID ================= */}
           {activeCategory !== "video" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-              {photoItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedItem(item)}
-                  className="group cursor-pointer rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:-translate-y-1"
-                >
-                  <div className="relative">
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+                {visiblePhotos.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className="cursor-pointer rounded-xl overflow-hidden shadow-md hover:shadow-xl transition"
+                  >
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-80 object-cover transition-transform group-hover:scale-105"
+                      className="w-full h-72 object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex flex-col justify-end p-6">
-                      <h3 className="text-white text-xl font-playfair">
-                        {item.title}
-                      </h3>
-                      <p className="text-chirag-pink text-sm capitalize">
-                        {item.category}
-                      </p>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* CONTROLS */}
+              <div className="text-center mb-20 space-x-4">
+                {hasMore && (
+                  <button
+                    onClick={() => setVisibleRows((r) => r + 2)}
+                    className="px-8 py-3 rounded-full font-semibold
+                    bg-gradient-to-r from-chirag-pink to-chirag-peach
+                    text-black shadow hover:shadow-lg transition"
+                  >
+                    View More
+                  </button>
+                )}
+
+                {visibleRows > 2 && (
+                  <button
+                    onClick={() => setVisibleRows(2)}
+                    className="px-8 py-3 rounded-full font-semibold
+                    bg-gray-200 text-gray-800 shadow hover:shadow-lg transition"
+                  >
+                    View Less
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
-          {/* ================= VIDEO SECTION ================= */}
+          {/* ================= VIDEOS ================= */}
           {showVideos && (
-            <div className="space-y-24">
-              {/* Instagram FIRST */}
+            <div className="space-y-24 mt-20">
               <InstagramVideos limit={6} />
-
-              {/* YouTube BELOW */}
               <YoutubeVideos limit={6} />
             </div>
           )}
@@ -223,12 +213,6 @@ const Portfolio = () => {
               <h3 className="text-2xl font-playfair mb-2">
                 {selectedItem.title}
               </h3>
-              <p className="text-chirag-pink mb-3 capitalize">
-                {selectedItem.category}
-              </p>
-              <p className="text-gray-600">
-                {selectedItem.description}
-              </p>
             </div>
           </div>
         </div>
