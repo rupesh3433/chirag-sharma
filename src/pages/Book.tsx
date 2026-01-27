@@ -194,7 +194,7 @@ export default function Book() {
         {/* HERO — INDEX ALIGNED */}
         <section className="pt-28 pb-5 bg-white">
           <div className="max-w-4xl mx-auto px-4 text-center">
-           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-full bg-chirag-pink/30 border border-chirag-pink/40 shadow-lg">
+           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-full bg-gradient-to-br from-chirag-pink to-pink-200 border border-chirag-pink/40 shadow-lg">
                          <Sparkles className="w-10 h-10 text-chirag-darkPurple" />
                        </div>
 

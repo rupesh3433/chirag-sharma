@@ -558,7 +558,7 @@ const Chatbot = () => {
         <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
           <div className="relative bg-gradient-to-br from-gray-900 to-black text-white px-4 py-4 rounded-3xl shadow-2xl max-w-[310px] border border-gray-700 animate-slide-in">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-chirag-pink to-pink-700 flex items-center justify-center flex-shrink-0">
                 <Sparkles size={24} className="text-white" />
               </div>
               <div>
@@ -621,7 +621,7 @@ const Chatbot = () => {
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="relative flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-chirag-pink to-pink-700 flex items-center justify-center shadow-lg">
                   <Sparkles size={18} className="text-white" />
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
