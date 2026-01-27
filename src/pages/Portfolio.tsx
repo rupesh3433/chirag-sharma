@@ -119,80 +119,97 @@ const Portfolio = () => {
         </div>
       </section>
 
-      {/* ================= CONTENT ================= */}
-      <section className="py-10 bg-white">
-        <div className="container-custom px-4">
-          {/* Filters */}
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-6 py-2 rounded-full transition ${
-                  activeCategory === cat.id
-                    ? "bg-chirag-pink text-chirag-darkPurple shadow"
-                    : "bg-gray-100 text-gray-600 hover:bg-chirag-pink/20"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+{/* ================= CONTENT ================= */}
+<section className="py-10 bg-white">
+  <div className="container-custom px-4">
+    {/* ================= FILTERS ================= */}
+    <div className="flex flex-wrap justify-center gap-4 mb-12">
+      {categories.map((cat) => (
+        <button
+          key={cat.id}
+          onClick={() => setActiveCategory(cat.id)}
+          className={`px-6 py-2 rounded-full transition ${
+            activeCategory === cat.id
+              ? "bg-chirag-pink text-chirag-darkPurple shadow"
+              : "bg-gray-100 text-gray-600 hover:bg-chirag-pink/20"
+          }`}
+        >
+          {cat.name}
+        </button>
+      ))}
+    </div>
 
-          {/* ================= PHOTO GRID ================= */}
-          {activeCategory !== "video" && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-                {visiblePhotos.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className="cursor-pointer rounded-xl overflow-hidden shadow-md hover:shadow-xl transition"
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-72 object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+    {/* ================= PHOTO GRID ================= */}
+    {activeCategory !== "video" && (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+          {visiblePhotos.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => setSelectedItem(item)}
+              className="cursor-pointer rounded-xl overflow-hidden shadow-md hover:shadow-xl transition"
+            >
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-full h-72 object-cover"
+              />
+            </div>
+          ))}
+        </div>
 
-              {/* CONTROLS */}
-              <div className="text-center mb-20 space-x-4">
-                {hasMore && (
-                  <button
-                    onClick={() => setVisibleRows((r) => r + 2)}
-                    className="px-8 py-3 rounded-full font-semibold
-                    bg-gradient-to-r from-chirag-pink to-chirag-peach
-                    text-black shadow hover:shadow-lg transition"
-                  >
-                    View More
-                  </button>
-                )}
-
-                {visibleRows > 2 && (
-                  <button
-                    onClick={() => setVisibleRows(2)}
-                    className="px-8 py-3 rounded-full font-semibold
-                    bg-gray-200 text-gray-800 shadow hover:shadow-lg transition"
-                  >
-                    View Less
-                  </button>
-                )}
-              </div>
-            </>
+        {/* ================= CONTROLS ================= */}
+        <div className="text-center mb-20 space-x-4">
+          {hasMore && (
+            <button
+              onClick={() => setVisibleRows((r) => r + 2)}
+              className="px-8 py-3 rounded-full font-semibold
+              bg-gradient-to-r from-chirag-pink to-chirag-peach
+              text-black shadow hover:shadow-lg transition"
+            >
+              View More
+            </button>
           )}
 
-          {/* ================= VIDEOS ================= */}
-          {showVideos && (
-            <div className="space-y-24 mt-20">
-              <InstagramVideos limit={6} />
-              <YoutubeVideos limit={6} />
-            </div>
+          {visibleRows > 2 && (
+            <button
+              onClick={() => setVisibleRows(2)}
+              className="px-8 py-3 rounded-full font-semibold
+              bg-gray-200 text-gray-800 shadow hover:shadow-lg transition"
+            >
+              View Less
+            </button>
           )}
         </div>
+      </>
+    )}
+
+    {/* ================= VIDEO SECTION ================= */}
+    {(activeCategory === "all" || activeCategory === "video") && (
+      <section className="mt-24">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-playfair font-bold">
+            Video <span className="header-gradient">Portfolio</span>
+          </h2>
+          <p className="text-gray-600 mt-3">
+            Watch our latest makeup transformations & tutorials
+          </p>
+        </div>
+
+        <div className="space-y-32">
+          {/* Instagram */}
+          <InstagramVideos limit={6} />
+
+          {/* Divider ensures visibility */}
+          <div className="border-t border-chirag-pink/20 pt-20">
+            <YoutubeVideos limit={6} />
+          </div>
+        </div>
       </section>
+    )}
+  </div>
+</section>
+
 
       {/* ================= LIGHTBOX ================= */}
       {selectedItem && (

@@ -3,24 +3,23 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Sparkles } from "lucide-react";
 import { FaInstagram, FaFacebookF, FaYoutube } from "react-icons/fa";
 
+/* ================= NAVBAR ================= */
+
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
-  /* Scroll shadow */
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 20);
+    const onScroll = () => setIsScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  /* Close menu on route change */
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  /* Lock body scroll */
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "unset";
     return () => {
@@ -34,37 +33,46 @@ const Navbar = () => {
     <>
       {/* NAVBAR */}
       <nav
-        className={`fixed w-full z-50 transition-all duration-300 ${
+        className={`fixed top-0 w-full z-50 transition-all duration-200 ${
           isScrolled
-            ? "bg-white/95 backdrop-blur-md shadow-md py-3"
-            : "bg-white/85 backdrop-blur-sm py-4"
+            ? "bg-white/95 backdrop-blur-md shadow-sm py-3"
+            : "bg-white/90 backdrop-blur-sm py-4"
         }`}
       >
-        <div className="container-custom flex items-center justify-between px-4 md:px-6">
+        <div className="container-custom flex items-center justify-between">
           {/* LOGO */}
-          <Link to="/" className="group">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-playfair font-bold flex items-center gap-2">
-              <span className="text-chirag-darkPurple group-hover:text-chirag-pink transition">
-                Chirag
-              </span>
-              <span className="bg-gradient-to-r from-chirag-darkPurple to-chirag-pink bg-clip-text text-transparent">
+          <Link to="/" className="flex items-center gap-2 group">
+            <h1 className="text-2xl sm:text-3xl font-playfair font-bold leading-none">
+              <span className="text-chirag-darkPurple">Chirag</span>{" "}
+              <span className="bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-pink bg-clip-text text-transparent">
                 Sharma
               </span>
-              <Sparkles className="w-4 h-4 text-chirag-pink opacity-0 group-hover:opacity-100 transition" />
             </h1>
+
+            {/* Sparkle icon – always visible */}
+            <Sparkles className="w-4 h-4 text-chirag-pink group-hover:text-chirag-peach transition-colors duration-200" />
           </Link>
 
-          {/* DESKTOP / TABLET MENU */}
-          <div className="hidden lg:flex items-center gap-6">
+          {/* DESKTOP MENU */}
+          <div className="hidden lg:flex items-center gap-7">
             <NavLink to="/" active={isActive("/")}>Home</NavLink>
             <NavLink to="/services" active={isActive("/services")}>Services</NavLink>
             <NavLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</NavLink>
             <NavLink to="/events" active={isActive("/events")}>Events</NavLink>
 
-            {/* BOOK NOW */}
+            {/* BOOK NOW – BEFORE ABOUT */}
             <Link
               to="/book"
-              className="px-4 xl:px-5 py-2 rounded-full font-semibold text-sm bg-gradient-to-r from-chirag-pink to-chirag-peach text-white shadow-md hover:opacity-90 transition"
+              className="
+                px-6 py-2 rounded-full
+                font-semibold text-sm
+                bg-chirag-pink/80
+                text-chirag-darkPurple
+                shadow-sm
+                transition-all duration-200
+                hover:bg-chirag-peach
+                hover:shadow-md
+              "
             >
               Book Now
             </Link>
@@ -72,8 +80,8 @@ const Navbar = () => {
             <NavLink to="/about" active={isActive("/about")}>About</NavLink>
           </div>
 
-          {/* DESKTOP SOCIAL ICONS */}
-          <div className="hidden lg:flex items-center gap-3 ml-4">
+          {/* SOCIAL ICONS */}
+          <div className="hidden lg:flex items-center gap-4 ml-4">
             <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
             <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
             <SocialIcon href="https://www.youtube.com/@jinniechiragmua" icon={FaYoutube} />
@@ -98,21 +106,22 @@ const Navbar = () => {
         />
       )}
 
-      {/* MOBILE MENU -- Always Keep in same order for both desktop and mobile view*/}
+      {/* MOBILE MENU */}
       <aside
-        className={`fixed top-0 right-0 h-full w-[280px] bg-white shadow-xl z-50 lg:hidden transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-[300px] bg-white z-50 shadow-xl
+        transition-transform duration-200 lg:hidden ${
           isMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="p-6 flex flex-col h-full">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-lg font-playfair font-bold text-chirag-darkPurple">
+          <div className="flex justify-between items-center mb-8">
+            <span className="text-xl font-playfair font-bold text-chirag-darkPurple">
               Menu
             </span>
             <X
-              size={24}
-              onClick={() => setIsMenuOpen(false)}
+              size={26}
               className="cursor-pointer"
+              onClick={() => setIsMenuOpen(false)}
             />
           </div>
 
@@ -124,18 +133,22 @@ const Navbar = () => {
 
             <Link
               to="/book"
-              className="mt-4 text-center px-5 py-3 rounded-xl bg-gradient-to-r from-chirag-pink to-chirag-peach text-white font-semibold shadow-md"
+              className="
+                mt-6 text-center px-5 py-3 rounded-xl
+                font-semibold
+                bg-chirag-pink/80
+                text-chirag-darkPurple
+                transition-all duration-200
+                hover:bg-chirag-peach
+              "
             >
               Book Now
             </Link>
 
-
             <MobileLink to="/about" active={isActive("/about")}>About</MobileLink>
-
           </nav>
 
-          {/* MOBILE SOCIAL ICONS */}
-          <div className="mt-auto pt-6 flex gap-4">
+          <div className="mt-auto pt-8 flex gap-5">
             <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
             <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
             <SocialIcon href="https://www.youtube.com/@jinniechiragmua" icon={FaYoutube} />
@@ -146,20 +159,16 @@ const Navbar = () => {
   );
 };
 
-/* ---------- HELPERS ---------- */
+/* ================= HELPERS ================= */
 
 const NavLink = ({ to, active, children }: any) => (
   <Link
     to={to}
-    className={`relative font-medium transition ${
-      active
-        ? "text-chirag-pink"
-        : "text-chirag-darkPurple hover:text-chirag-pink"
-    }`}
+    className="relative font-medium text-chirag-darkPurple transition-colors duration-200 hover:text-chirag-pink"
   >
     {children}
     <span
-      className={`absolute -bottom-1 left-0 h-0.5 bg-chirag-pink transition-all duration-300 ${
+      className={`absolute -bottom-1 left-0 h-[2px] bg-chirag-pink transition-all duration-200 ${
         active ? "w-full" : "w-0 hover:w-full"
       }`}
     />
@@ -169,10 +178,10 @@ const NavLink = ({ to, active, children }: any) => (
 const MobileLink = ({ to, active, children }: any) => (
   <Link
     to={to}
-    className={`px-4 py-3 rounded-lg font-medium transition ${
+    className={`px-4 py-3 rounded-lg font-medium transition duration-200 ${
       active
-        ? "bg-chirag-pink text-white"
-        : "text-chirag-darkPurple hover:bg-chirag-pink/10"
+        ? "bg-chirag-pink/80 text-chirag-darkPurple"
+        : "text-chirag-darkPurple hover:bg-chirag-pink/15"
     }`}
   >
     {children}
@@ -184,7 +193,7 @@ const SocialIcon = ({ href, icon: Icon }: any) => (
     href={href}
     target="_blank"
     rel="noreferrer"
-    className="hover:text-chirag-pink transition"
+    className="text-chirag-darkPurple hover:text-chirag-pink transition-colors duration-200"
   >
     <Icon size={18} />
   </a>

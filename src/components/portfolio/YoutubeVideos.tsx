@@ -158,7 +158,7 @@ const YoutubeVideos = ({ limit = 6 }: YoutubeVideosProps) => {
                 className="px-3"
               >
                 {/* 🔽 ONLY CHANGE IS HERE */}
-                <div className="rounded-2xl overflow-hidden shadow-lg bg-white mb-6 md:mb-6">
+                <div className="rounded-2xl overflow-hidden shadow-lg bg-white mb-6 md:mb-4">
                   <div className="aspect-video relative">
                     {isActive ? (
                       <iframe
