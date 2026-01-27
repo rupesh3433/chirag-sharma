@@ -20,10 +20,9 @@ const Navbar = () => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  /* Lock body scroll (FIXED TS ISSUE) */
+  /* Lock body scroll */
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "unset";
-
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -58,11 +57,11 @@ const Navbar = () => {
           {/* DESKTOP / TABLET MENU */}
           <div className="hidden lg:flex items-center gap-6">
             <NavLink to="/" active={isActive("/")}>Home</NavLink>
-            <NavLink to="/about" active={isActive("/about")}>About</NavLink>
-            <NavLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</NavLink>
             <NavLink to="/services" active={isActive("/services")}>Services</NavLink>
+            <NavLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</NavLink>
+            <NavLink to="/events" active={isActive("/events")}>Events</NavLink>
 
-            {/* BOOK NOW (UNCHANGED STYLE) */}
+            {/* BOOK NOW */}
             <Link
               to="/book"
               className="px-4 xl:px-5 py-2 rounded-full font-semibold text-sm bg-gradient-to-r from-chirag-pink to-chirag-peach text-white shadow-md hover:opacity-90 transition"
@@ -70,10 +69,10 @@ const Navbar = () => {
               Book Now
             </Link>
 
-            <NavLink to="/contact" active={isActive("/contact")}>Contact</NavLink>
+            <NavLink to="/about" active={isActive("/about")}>About</NavLink>
           </div>
 
-          {/* SOCIAL ICONS */}
+          {/* DESKTOP SOCIAL ICONS */}
           <div className="hidden lg:flex items-center gap-3 ml-4">
             <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
             <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
@@ -99,7 +98,7 @@ const Navbar = () => {
         />
       )}
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU -- Always Keep in same order for both desktop and mobile view*/}
       <aside
         className={`fixed top-0 right-0 h-full w-[280px] bg-white shadow-xl z-50 lg:hidden transition-transform duration-300 ${
           isMenuOpen ? "translate-x-0" : "translate-x-full"
@@ -110,15 +109,18 @@ const Navbar = () => {
             <span className="text-lg font-playfair font-bold text-chirag-darkPurple">
               Menu
             </span>
-            <X size={24} onClick={() => setIsMenuOpen(false)} className="cursor-pointer" />
+            <X
+              size={24}
+              onClick={() => setIsMenuOpen(false)}
+              className="cursor-pointer"
+            />
           </div>
 
           <nav className="flex flex-col gap-2">
             <MobileLink to="/" active={isActive("/")}>Home</MobileLink>
-            <MobileLink to="/about" active={isActive("/about")}>About</MobileLink>
-            <MobileLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</MobileLink>
             <MobileLink to="/services" active={isActive("/services")}>Services</MobileLink>
-            <MobileLink to="/contact" active={isActive("/contact")}>Contact</MobileLink>
+            <MobileLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</MobileLink>
+            <MobileLink to="/events" active={isActive("/events")}>Events</MobileLink>
 
             <Link
               to="/book"
@@ -126,8 +128,13 @@ const Navbar = () => {
             >
               Book Now
             </Link>
+
+
+            <MobileLink to="/about" active={isActive("/about")}>About</MobileLink>
+
           </nav>
 
+          {/* MOBILE SOCIAL ICONS */}
           <div className="mt-auto pt-6 flex gap-4">
             <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
             <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
@@ -145,7 +152,9 @@ const NavLink = ({ to, active, children }: any) => (
   <Link
     to={to}
     className={`relative font-medium transition ${
-      active ? "text-chirag-pink" : "text-chirag-darkPurple hover:text-chirag-pink"
+      active
+        ? "text-chirag-pink"
+        : "text-chirag-darkPurple hover:text-chirag-pink"
     }`}
   >
     {children}
@@ -171,7 +180,12 @@ const MobileLink = ({ to, active, children }: any) => (
 );
 
 const SocialIcon = ({ href, icon: Icon }: any) => (
-  <a href={href} target="_blank" rel="noreferrer" className="hover:text-chirag-pink transition">
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    className="hover:text-chirag-pink transition"
+  >
     <Icon size={18} />
   </a>
 );
