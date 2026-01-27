@@ -84,7 +84,7 @@ const About = () => {
               beauty into an unforgettable experience.
             </p>
 
-            <div className="mt-14 flex flex-wrap justify-center gap-6">
+            <div className="mt-14 flex flex-wrap justify-center gap-6 ">
               <Badge icon={Star} label="5.0 Rating" />
               <Badge icon={Users} label="1000+ Clients" />
               <Badge icon={Award} label="50+ Awards" />
@@ -116,9 +116,9 @@ const About = () => {
                 artistry, complemented by intricate henna designs.
               </p>
 
-              <div className="grid grid-cols-3 gap-4 pt-6">
+              <div className="grid grid-cols-3 gap-4 pt-4">
                 <Stat value="9+" label="Years Experience" icon={Target} />
-                <Stat value="1000+" label="Happy Clients" icon={Users} />
+                <Stat value="1K+" label="Happy Clients" icon={Users} />
                 <Stat value="50+" label="Awards Won" icon={Trophy} />
               </div>
             </div>
@@ -147,7 +147,7 @@ const About = () => {
               <h2 className="text-5xl font-bold">
                 My <span className="header-gradient">Philosophy</span>
               </h2>
-              <p className="text-muted-foreground text-xl">
+              <p className="text-muted-foreground text-xl mt-4">
                 Core values that guide every brushstroke
               </p>
             </div>
@@ -167,7 +167,7 @@ const About = () => {
               <h2 className="text-5xl font-bold">
                 Professional <span className="header-gradient">Milestones</span>
               </h2>
-              <p className="text-muted-foreground text-xl">
+              <p className="text-muted-foreground text-xl mt-4">
                 A decade of dedication, growth, and artistic excellence.
               </p>
             </div>
@@ -214,7 +214,7 @@ const About = () => {
               <h2 className="text-5xl font-bold">
                 Get in <span className="header-gradient">Touch</span>
               </h2>
-              <p className="text-muted-foreground text-xl">
+              <p className="text-muted-foreground text-xl mt-4">
                 Have questions or want to book a consultation?
               </p>
             </div>
@@ -305,7 +305,7 @@ const PhilosophyCard = ({ icon: Icon, title }: any) => (
 
 const ContactCard = ({ icon: Icon, title, value, href }: any) => (
   <a href={href} className="service-card text-center hover-lift block">
-    <Icon className="mx-auto mb-4 text-chirag-pink" size={32} />
+    <Icon className="mx-auto mb-4  text-chirag-gray" size={32} />
     <h4 className="font-bold">{title}</h4>
     <p className="font-medium">{value}</p>
   </a>

@@ -552,7 +552,7 @@ const Index = () => {
             <InstagramVideos limit={6} />
 
             {/* YouTube BELOW */}
-            <YoutubeVideos limit={6} />
+            <YoutubeVideos limit={12} />
 
 
           </div>
