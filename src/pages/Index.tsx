@@ -14,55 +14,56 @@ const servicesData = [
     id: 1,
     title: "Bridal Makeup",
     description:
-      "Luxury bridal makeup by Celebrity Makeup Artist Chirag Sharma with premium products and flawless finish.",
+      "Luxury bridal makeup services by Celebrity Makeup Artist Chirag Sharma, crafted with premium products and a flawless, long-lasting finish.",
     image: "/photos/chirag1.PNG",
     features: [
-      "Signature bridal looks",
-      "HD / Brush technique",
-      "Luxury international products",
-      "Fully customized finish",
+      "Chirag’s Signature Bridal Makeup",
+      "Luxury Bridal Makeup (HD / Brush)",
+      "Reception / Engagement / Cocktail Makeup",
+      "Fully customized luxury finish",
     ],
   },
   {
     id: 2,
     title: "Party Makeup",
     description:
-      "Glam makeup for receptions, engagements, cocktails, and special events.",
+      "Glamorous party makeup for receptions, engagements, cocktails, and celebrations, tailored to your outfit and occasion.",
     image: "/photos/chirag2.PNG",
     features: [
-      "By Chirag Sharma or Senior Artist",
+      "Party Makeup by Chirag Sharma",
+      "Party Makeup by Senior Artist",
       "Event-based customization",
-      "Long-lasting glam",
-      "Premium products",
+      "Excluding travel & accommodation",
     ],
   },
   {
     id: 3,
-    title: "Henna (Mehendi)",
+    title: "Haldi & Mehendi Makeup",
     description:
-      "Intricate bridal and party henna using premium natural henna.",
+      "Bright, fresh, and elegant makeup for Haldi and Mehendi ceremonies, designed to enhance natural beauty.",
     image: "/photos/chirag3.PNG",
     features: [
-      "By Chirag or Senior Artist",
-      "Traditional & modern designs",
-      "Bridal henna available",
-      "Natural ingredients",
+      "Haldi / Mehendi Makeup by Chirag Sharma",
+      "Haldi / Mehendi Makeup by Senior Artist",
+      "Soft, natural, ceremony-ready finish",
+      "Excluding travel & accommodation",
     ],
   },
   {
     id: 4,
-    title: "Celebrity Makeup",
+    title: "Groom Makeup",
     description:
-      "High-end celebrity makeup services delivered with VIP standards.",
+      "Professional groom makeup services ensuring a sharp, photo-ready look for weddings and receptions.",
     image: "/photos/chirag4.PNG",
     features: [
-      "Celebrity MUA",
-      "9+ years experience",
-      "Luxury service standards",
-      "Event & bridal focus",
+      "Picture Perfect Photo-Ready Makeup",
+      "Wedding Reception Groom Makeup",
+      "Luxury high-end products only",
+      "Hairstyling included",
     ],
   },
 ];
+
 
 const eventDummyImages = [
   "/photos/chirag1.PNG",
@@ -553,16 +554,17 @@ const Index = () => {
             {/* YouTube BELOW */}
             <YoutubeVideos limit={6} />
 
-            <div className="text-center">
+
+          </div>
+          <div className="py-10 text-center">
               <Link to="/portfolio" className="button-primary">
                 Explore Full Portfolio
               </Link>
             </div>
-          </div>
         </section>
 
         {/* ================= TESTIMONIALS ================= */}
-        <section className="py-20 bg-chirag-pink/5">
+        <section className="py-10 bg-chirag-pink/5">
           <div className="container-custom relative">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 font-playfair">
