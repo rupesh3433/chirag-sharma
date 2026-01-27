@@ -2,19 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
-import {
-  CheckCircle,
-  Play,
-  Instagram,
-  Star,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import {
-  HoverCard,
-  HoverCardTrigger,
-  HoverCardContent,
-} from "@/components/ui/hover-card";
+import { CheckCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
+
+import InstagramVideos from "../components/portfolio/InstagramVideos";
+import YoutubeVideos from "../components/portfolio/YoutubeVideos";
 
 /* -------------------- DATA -------------------- */
 
@@ -71,6 +62,13 @@ const servicesData = [
       "Event & bridal focus",
     ],
   },
+];
+
+const eventDummyImages = [
+  "/photos/chirag1.PNG",
+  "/photos/chirag2.PNG",
+  "/photos/chirag3.PNG",
+  "/photos/chirag4.PNG",
 ];
 
 const portfolioItems = [
@@ -188,6 +186,7 @@ const Index = () => {
   const [testimonialIndex, setTestimonialIndex] = useState(0);
 
   const sectionRef = useRef<HTMLDivElement>(null);
+  const eventsRef = useRef<HTMLElement>(null);
   const portfolioRef = useRef<HTMLElement>(null);
 
   /* Scroll tracking */
@@ -202,31 +201,29 @@ const Index = () => {
           setScrollProgress((window.scrollY / total) * 100);
           setScrollY(window.scrollY);
 
-          // Portfolio scroll animation
-          if (portfolioRef.current) {
-            const rect = portfolioRef.current.getBoundingClientRect();
+          // EVENTS scroll animation (FIXED)
+          if (eventsRef.current) {
+            const rect = eventsRef.current.getBoundingClientRect();
+
             if (rect.top < window.innerHeight && rect.bottom > 0) {
-              const items = portfolioRef.current.querySelectorAll('.portfolio-item');
-              const scrollPercentage = 1 - (rect.top / window.innerHeight);
-              
-              items.forEach((item, index) => {
-                const delay = index * 0.1;
+              const items =
+                eventsRef.current.querySelectorAll(".portfolio-item");
+
+              items.forEach((item) => {
                 const element = item as HTMLElement;
-                if (scrollPercentage > 0.1 + delay) {
-                  element.classList.add('animate-fade-in');
-                  element.style.opacity = '1';
-                }
+                element.style.opacity = "1";
+                element.classList.add("animate-fade-in");
               });
             }
           }
 
           // Services scroll animation
           if (sectionRef.current) {
-            const items = sectionRef.current.querySelectorAll('.service-card');
+            const items = sectionRef.current.querySelectorAll(".service-card");
             items.forEach((item) => {
               const rect = item.getBoundingClientRect();
               if (rect.top < window.innerHeight * 0.8) {
-                item.classList.add('animate-fade-in');
+                item.classList.add("animate-fade-in");
               }
             });
           }
@@ -275,13 +272,14 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="order-2 lg:order-1 text-center lg:text-left">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-bold leading-tight mb-6">
-                  Where <span className="header-gradient">Art Meets Beauty</span>
+                  Where{" "}
+                  <span className="header-gradient">Art Meets Beauty</span>
                 </h1>
 
                 <p className="text-gray-600 text-lg max-w-xl mx-auto lg:mx-0 mb-6">
-                  Transforming faces through timeless makeup artistry and elegant
-                  henna designs. Experience beauty with Chirag Sharma's signature
-                  touch.
+                  Transforming faces through timeless makeup artistry and
+                  elegant henna designs. Experience beauty with Chirag Sharma's
+                  signature touch.
                 </p>
 
                 <div className="relative mb-8 p-4 bg-white/80 backdrop-blur-sm rounded-lg border border-chirag-pink/20 shadow-sm max-w-xl mx-auto lg:mx-0">
@@ -294,15 +292,14 @@ const Index = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  
-                    {/* HERO BUTTON FIXED */}
-      <a
-        href="/Catalogue.pdf"
-        download
-        className="button-primary text-center"
-      >
-        Download Catalogue
-      </a>
+                  {/* HERO BUTTON FIXED */}
+                  <a
+                    href="/Catalogue.pdf"
+                    download
+                    className="button-primary text-center"
+                  >
+                    Download Catalogue
+                  </a>
                   <Link to="/book" className="button-secondary text-center">
                     Book Now
                   </Link>
@@ -332,125 +329,198 @@ const Index = () => {
         {/* ================= SERVICES ================= */}
         <section
           ref={sectionRef}
-          className="py-20 bg-gradient-to-b from-white to-chirag-pink/5"
+          className="relative py-24 bg-gradient-to-b from-white to-chirag-pink/10"
         >
           <div className="container-custom">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold font-playfair mb-4">
+            {/* Header */}
+            <div className="text-center mb-20">
+              <h2 className="text-4xl md:text-5xl font-bold font-playfair mb-6">
                 Our <span className="header-gradient">Services</span>
               </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Premium makeup and henna services by Celebrity Makeup Artist Chirag
-                Sharma.
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Premium makeup and henna services crafted by Celebrity Makeup
+                Artist Chirag Sharma.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {servicesData.map((service) => (
                 <div
                   key={service.id}
-                  className="service-card opacity-0 bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all"
+                  className="group relative h-[420px] rounded-2xl overflow-hidden
+          shadow-lg hover:shadow-2xl transition-all duration-500"
                 >
-                  <div className="h-44 mb-4 overflow-hidden rounded-lg">
-                    <img
-                      src={service.image}
-                      alt={service.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    />
+                  {/* Background Image */}
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    className="absolute inset-0 w-full h-full object-cover
+            transition-transform duration-700 group-hover:scale-110"
+                  />
+
+                  {/* Dark overlay (always present) */}
+                  <div className="absolute inset-0 bg-black/35" />
+
+                  {/* Default content (title only) */}
+                  <div
+                    className="absolute bottom-6 left-6 right-6 transition-all duration-500
+            group-hover:opacity-0 group-hover:translate-y-4"
+                  >
+                    <h3 className="text-white text-2xl font-playfair font-semibold">
+                      {service.title}
+                    </h3>
                   </div>
 
-                  <h3 className="text-xl font-semibold font-playfair mb-2">
-                    {service.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    {service.description}
-                  </p>
-
-                  <ul className="space-y-2 mb-6">
-                    {service.features.map((f, i) => (
-                      <li key={i} className="flex items-start text-sm">
-                        <CheckCircle
-                          size={16}
-                          className="text-chirag-pink mr-2 mt-1 flex-shrink-0"
-                        />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    to="/services"
-                    className="inline-block font-medium text-chirag-darkPurple border-b-2 border-chirag-pink hover:text-chirag-pink transition-colors"
+                  {/* Hover content */}
+                  <div
+                    className="absolute inset-0 flex flex-col justify-end p-6
+            bg-gradient-to-t from-black/85 via-black/60 to-transparent
+            opacity-0 group-hover:opacity-100
+            transition-all duration-500"
                   >
-                    View Details →
-                  </Link>
+                    <h3 className="text-white text-xl font-playfair font-semibold mb-2">
+                      {service.title}
+                    </h3>
+
+                    <p className="text-white/80 text-sm mb-4 line-clamp-3">
+                      {service.description}
+                    </p>
+
+                    <ul className="space-y-2 mb-5">
+                      {service.features.slice(0, 3).map((f, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start text-sm text-white/90"
+                        >
+                          <CheckCircle
+                            size={16}
+                            className="text-chirag-pink mr-2 mt-1 flex-shrink-0"
+                          />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      to="/services"
+                      className="inline-flex w-fit items-center gap-2 px-5 py-2
+              rounded-full bg-white/20 backdrop-blur-md text-white text-sm
+              hover:bg-white/30 transition-colors"
+                    >
+                      View Details →
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
+            {/* 👇 ADD HERE */}
+<div className="mt-20 text-center">
+  <Link
+    to="/services"
+    className="inline-block px-10 py-4 rounded-full font-semibold
+    bg-gradient-to-r from-chirag-pink to-chirag-peach
+    text-black shadow-lg hover:shadow-xl hover:scale-101
+    transition-all duration-300"
+  >
+    Explore All Services
+  </Link>
+</div>
           </div>
+
+          
         </section>
 
-        {/* ================= PORTFOLIO ================= */}
-        <section ref={portfolioRef} className="py-20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-chirag-pink/10 pointer-events-none" />
-
+        {/* ================= EVENTS ================= */}
+        <section
+          ref={eventsRef}
+          className="relative py-24 overflow-hidden bg-gradient-to-b from-white via-white to-chirag-pink/10"
+        >
+          {/* Decorative blobs */}
           <div
-            className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-chirag-purple/10 to-chirag-pink/10 blur-3xl opacity-70"
-            style={{ transform: `translateY(${scrollY * 0.2}px)` }}
+            className="absolute -top-48 -right-48 w-[32rem] h-[32rem] rounded-full bg-gradient-to-br from-chirag-purple/20 to-chirag-pink/20 blur-3xl opacity-60"
+            style={{ transform: `translateY(${scrollY * 0.15}px)` }}
+          />
+          <div
+            className="absolute -bottom-48 -left-48 w-[32rem] h-[32rem] rounded-full bg-gradient-to-tr from-chirag-peach/20 to-chirag-pink/20 blur-3xl opacity-60"
+            style={{ transform: `translateY(${scrollY * -0.1}px)` }}
           />
 
-          <div className="container-custom relative">
-            <div className="text-center mb-16">
-              <div className="inline-block relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-chirag-pink/20 to-chirag-peach/20 blur-xl -m-4 rounded-full" />
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 font-playfair relative">
-                  Featured <span className="header-gradient">Work</span>
+          <div className="container-custom relative z-10">
+            {/* Header */}
+            <div className="text-center mb-20">
+              <div className="inline-block relative mb-6">
+                <div className="absolute inset-0 -m-6 bg-gradient-to-r from-chirag-pink/30 to-chirag-peach/30 blur-2xl rounded-full" />
+                <h2 className="relative text-4xl md:text-5xl font-bold font-playfair">
+                  Upcoming <span className="header-gradient">Events</span>
                 </h2>
               </div>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Browse through some of our best makeup transformations and henna
-                designs.
+
+              <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+                Discover our upcoming bridal looks, fashion shoots, celebrity
+                makeovers, and premium henna showcases.
               </p>
             </div>
 
-            {/* Image Portfolio */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {/* Event Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
               {portfolioItems.map((item, index) => (
                 <div
                   key={item.id}
-                  className="portfolio-item group opacity-0"
-                  style={{
-                    transform: `translateY(${activeIndex === index ? -5 : 0}px)`,
-                    transition: "all 0.3s ease-out",
-                  }}
+                  className="group relative"
                   onMouseEnter={() => setActiveIndex(index)}
                   onMouseLeave={() => setActiveIndex(null)}
                 >
-                  <div className="relative overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
+                  <div
+                    className={`relative h-[420px] rounded-2xl overflow-hidden
+              shadow-lg transition-all duration-500
+              ${
+                activeIndex === index
+                  ? "shadow-2xl -translate-y-2"
+                  : "shadow-md"
+              }`}
+                  >
+                    {/* Image */}
                     <img
-                      src={item.image}
+                      src={eventDummyImages[index % eventDummyImages.length]}
                       alt={item.title}
-                      className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="absolute inset-0 w-full h-full object-cover
+              transition-transform duration-700 group-hover:scale-110"
                     />
 
-                    <div className="absolute inset-0 flex flex-col justify-end p-6 transform translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <span className="text-chirag-pink text-sm uppercase tracking-wider mb-1">
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-90" />
+
+                    {/* Content */}
+                    <div
+                      className="absolute inset-0 flex flex-col justify-end p-6
+              transition-all duration-500"
+                    >
+                      <span className="text-chirag-pink text-xs uppercase tracking-widest mb-2">
                         {item.category}
                       </span>
-                      <h3 className="text-white text-xl font-semibold font-playfair">
+
+                      <h3 className="text-white text-xl font-semibold font-playfair leading-snug">
                         {item.title}
                       </h3>
-                      <p className="text-white/80 text-sm mt-2 line-clamp-2">
+
+                      <p className="text-white/80 text-sm mt-2 line-clamp-3">
                         {item.description}
                       </p>
-                      <div className="h-0 group-hover:h-8 overflow-hidden transition-all duration-300 mt-2">
+
+                      {/* CTA */}
+                      <div
+                        className="mt-5 transform translate-y-6 opacity-0
+                group-hover:translate-y-0 group-hover:opacity-100
+                transition-all duration-500"
+                      >
                         <Link
-                          to="/portfolio"
-                          className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm hover:bg-white/30 transition-colors"
+                          to="/events"
+                          className="inline-flex items-center gap-2 px-5 py-2
+                  rounded-full bg-white/20 backdrop-blur-md text-white text-sm
+                  hover:bg-white/30 transition-colors"
                         >
-                          View Details
+                          View Details →
                         </Link>
                       </div>
                     </div>
@@ -459,130 +529,33 @@ const Index = () => {
               ))}
             </div>
 
-            {/* Video Portfolio */}
-            <div className="mb-16">
-              <div className="text-center mb-10">
-                <h3 className="text-2xl md:text-3xl font-bold font-playfair relative inline-block">
-                  <span className="relative z-10">Watch Transformations</span>
-                  <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-chirag-pink to-chirag-peach" />
-                </h3>
-                <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
-                  See Chirag's artistry in action through these captivating videos
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {videoPortfolioItems.map((video) => (
-                  <div key={video.id} className="video-portfolio-item group">
-                    <div className="relative overflow-hidden rounded-xl shadow-lg">
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.title}
-                        className="w-full h-64 object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                        <button
-                          onClick={() => handlePlayVideo(video.id)}
-                          className="w-16 h-16 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-all duration-300 group-hover:scale-110"
-                        >
-                          <Play size={30} className="text-white fill-white ml-1" />
-                        </button>
-
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                          <a
-                              href={video.instagramLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-chirag-pink to-chirag-peach rounded-full text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                            >
-                              <Instagram size={18} />
-                              <span>View on Instagram</span>
-                            </a>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80 p-0 overflow-hidden">
-                            <div className="p-4 bg-gradient-to-br from-chirag-pink/20 to-chirag-peach/20">
-                              <p className="text-sm text-gray-700">
-                                See more beautiful transformations and behind-the-scenes
-                                content on Chirag's Instagram profile.
-                              </p>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 w-full p-4">
-                        <h4 className="text-white font-playfair text-xl">
-                          {video.title}
-                        </h4>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Video Modal */}
-            {activeVideo && (
-              <div
-                className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-                onClick={handleCloseVideo}
-              >
-                <div
-                  className="max-w-4xl w-full bg-white rounded-2xl overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="relative pt-[56.25%] w-full">
-                    <iframe
-                      src={
-                        videoPortfolioItems.find((v) => v.id === activeVideo)
-                          ?.videoUrl
-                      }
-                      className="absolute inset-0 w-full h-full border-0"
-                      allowFullScreen
-                      title="Instagram video"
-                    />
-                  </div>
-                  <div className="p-4 flex justify-between items-center">
-                    <h3 className="font-playfair text-xl text-gray-800">
-                      {
-                        videoPortfolioItems.find((v) => v.id === activeVideo)
-                          ?.title
-                      }
-                    </h3>
-                    <button
-                      onClick={handleCloseVideo}
-                      className="p-2 rounded-full hover:bg-gray-100"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="text-center mt-12">
+            {/* Bottom CTA */}
+            <div className="text-center">
               <Link
-                to="/portfolio"
-                className="button-primary relative group overflow-hidden"
+                to="/events"
+                className="inline-block px-10 py-4 rounded-full font-semibold
+        bg-gradient-to-r from-chirag-pink to-chirag-peach
+        text-black shadow-lg hover:shadow-xl hover:scale-101
+        transition-all duration-300"
               >
-                <span className="absolute inset-0 w-0 bg-gradient-to-r from-chirag-peach to-chirag-pink group-hover:w-full transition-all duration-700" />
-                <span className="relative z-10">Explore Full Portfolio</span>
+                Explore All Events
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= VIDEO SECTION (NEW) ================= */}
+        <section ref={portfolioRef} className="py-20 bg-white">
+          <div className="container-custom space-y-24">
+            {/* Instagram FIRST */}
+            <InstagramVideos limit={6} />
+
+            {/* YouTube BELOW */}
+            <YoutubeVideos limit={6} />
+
+            <div className="text-center">
+              <Link to="/portfolio" className="button-primary">
+                Explore Full Portfolio
               </Link>
             </div>
           </div>
@@ -605,7 +578,9 @@ const Index = () => {
               <div className="overflow-hidden">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateX(-${testimonialIndex * 100}%)` }}
+                  style={{
+                    transform: `translateX(-${testimonialIndex * 100}%)`,
+                  }}
                 >
                   {testimonials.map((testimonial) => (
                     <div
