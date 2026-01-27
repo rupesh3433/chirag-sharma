@@ -14,21 +14,26 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
-/* -------------------- */
-/* DATA */
-/* -------------------- */
+/* -------------------- DATA -------------------- */
 
 const SERVICES: Record<string, string[]> = {
-  "Bridal Makeup": [
-    "Chirag's Signature Bridal Makeup",
+  "Bridal Makeup Services": [
+    "Chirag’s Signature Bridal Makeup",
     "Luxury Bridal Makeup (HD / Brush)",
     "Reception / Engagement / Cocktail Makeup",
   ],
-  "Party Makeup": [
+  "Party Makeup Services": [
     "Party Makeup – By Chirag Sharma",
     "Party Makeup – By Senior Artist",
   ],
-  "Henna Art": ["Henna – By Chirag Sharma", "Henna – By Senior Artist"],
+  "Haldi & Mehendi Makeup Services": [
+    "Haldi / Mehendi Makeup – By Chirag Sharma",
+    "Haldi / Mehendi Makeup – By Senior Artist",
+  ],
+  "Groom Makeup Services": [
+    "Picture Perfect Photo-Ready Makeup",
+    "Wedding Reception Groom Makeup",
+  ],
 };
 
 const COUNTRIES = ["Nepal", "India", "Pakistan", "Bangladesh", "Dubai"];
@@ -58,19 +63,15 @@ export default function Book() {
 
   const [formData, setFormData] = useState(emptyForm);
   const [bookingId, setBookingId] = useState<string | null>(null);
-
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  /* -------------------- */
-  /* HANDLERS */
-  /* -------------------- */
+  /* -------------------- HANDLERS -------------------- */
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
@@ -93,10 +94,7 @@ export default function Book() {
       const res = await fetch(`${API_BASE}/bookings/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          phone: fullPhone,
-        }),
+        body: JSON.stringify({ ...formData, phone: fullPhone }),
       });
 
       const data = await res.json();
@@ -120,10 +118,7 @@ export default function Book() {
       const res = await fetch(`${API_BASE}/bookings/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking_id: bookingId,
-          otp,
-        }),
+        body: JSON.stringify({ booking_id: bookingId, otp }),
       });
 
       const data = await res.json();
@@ -134,7 +129,6 @@ export default function Book() {
       setFormData(emptyForm);
       setOtp("");
       setBookingId(null);
-
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err: any) {
       setOtpError(err.message || "Invalid OTP");
@@ -148,9 +142,7 @@ export default function Book() {
     setOtpError("Booking request was not completed.");
   };
 
-  /* -------------------- */
-  /* RESEND TIMER */
-  /* -------------------- */
+  /* -------------------- RESEND TIMER -------------------- */
 
   useEffect(() => {
     if (!showOtpModal || canResend) return;
@@ -192,29 +184,38 @@ export default function Book() {
     }
   };
 
-  /* -------------------- */
-  /* UI */
-  /* -------------------- */
+  /* -------------------- UI -------------------- */
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
       <main className="flex-grow">
-        <section className="pt-28 pb-16 bg-gradient-to-br from-pink-50 via-white to-purple-50">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-400 rounded-full mb-4 shadow-lg">
-                <Sparkles className="w-10 h-10 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-                Book Your Service
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Fill in the details to complete your booking
-              </p>
+        {/* HERO — INDEX ALIGNED */}
+        <section className="pt-28 pb-5 bg-white">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <div
+              className="inline-flex items-center justify-center w-[80px] h-[80px] mb-5 rounded-full
+  bg-gradient-to-br from-chirag-pink/30 to-chirag-gold/30
+  border border-chirag-pink/50 shadow-md"
+            >
+              <Sparkles className="w-[46px] h-[46px] text-chirag-gold/90" />
             </div>
 
+            <h1 className="text-4xl sm:text-5xl font-playfair font-bold mb-6">
+              Book Your <span className="header-gradient">Service</span>
+            </h1>
+
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+              Fill in the details below to confirm your personalized makeup
+              experience with Chirag Sharma.
+            </p>
+          </div>
+        </section>
+
+        {/* FORM */}
+        <section className="pb-24 bg-gradient-to-b from-white to-chirag-pink/10">
+          <div className="max-w-4xl mx-auto px-4">
             {showSuccess && (
               <div className="mb-6 rounded-xl bg-green-100 border border-green-300 px-6 py-4 text-center">
                 <div className="flex items-center justify-center gap-2 text-green-800 font-semibold">
@@ -223,17 +224,11 @@ export default function Book() {
               </div>
             )}
 
-            {otpError && !showOtpModal && (
-              <div className="mb-6 rounded-xl bg-red-100 border border-red-300 px-6 py-3 text-center text-red-700">
-                {otpError}
-              </div>
-            )}
-
             <form
               onSubmit={handleSubmit}
               className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl space-y-8"
             >
-              {/* Service */}
+              {/* SERVICE */}
               <div className="grid md:grid-cols-2 gap-6">
                 <SelectField
                   label="Service"
@@ -261,27 +256,26 @@ export default function Book() {
                 </SelectField>
               </div>
 
-              {/* Personal */}
+              {/* PERSONAL */}
               <div className="grid md:grid-cols-2 gap-6">
                 <InputField
                   label="Full Name"
                   name="name"
-                  value={formData.name}
                   icon={<User />}
+                  value={formData.name}
                   onChange={handleChange}
                 />
-
                 <InputField
                   label="Email"
                   name="email"
                   type="email"
-                  value={formData.email}
                   icon={<Mail />}
+                  value={formData.email}
                   onChange={handleChange}
                 />
               </div>
 
-              {/* Phone */}
+              {/* PHONE */}
               <div>
                 <label className="flex items-center gap-2 text-sm font-semibold mb-2">
                   <Phone /> Phone Number
@@ -318,8 +312,8 @@ export default function Book() {
                 </div>
               </div>
 
-              {/* Location */}
-              <div className="grid md:grid-cols-3 gap-6 items-start">
+              {/* LOCATION */}
+              <div className="grid md:grid-cols-3 gap-6">
                 <SelectField
                   label="Service Country"
                   name="service_country"
@@ -335,11 +329,10 @@ export default function Book() {
                 <InputField
                   label="Pincode"
                   name="pincode"
-                  value={formData.pincode}
                   icon={<MapPin />}
+                  value={formData.pincode}
                   onChange={handleChange}
                 />
-
                 <InputField
                   label="Address"
                   name="address"
@@ -352,8 +345,8 @@ export default function Book() {
                 label="Preferred Date"
                 name="date"
                 type="date"
-                value={formData.date}
                 icon={<Calendar />}
+                value={formData.date}
                 onChange={handleChange}
               />
 
@@ -365,10 +358,7 @@ export default function Book() {
                 className="w-full border rounded-xl p-4 min-h-[120px]"
               />
 
-              <button
-                disabled={loading}
-                className="w-full bg-pink-400 hover:bg-pink-500 disabled:opacity-60 text-white py-4 rounded-xl font-semibold"
-              >
+              <button disabled={loading} className="w-full button-primary py-4">
                 {loading ? "Sending OTP..." : "Request Booking"}
               </button>
             </form>
@@ -410,7 +400,7 @@ export default function Book() {
               className={`w-full py-2 rounded font-semibold ${
                 otp.length !== 6
                   ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-pink-400 hover:bg-pink-500 text-white"
+                  : "button-primary"
               }`}
             >
               Verify OTP
@@ -420,7 +410,7 @@ export default function Book() {
               {canResend ? (
                 <button
                   onClick={resendOtp}
-                  className="text-pink-500 font-semibold"
+                  className="text-chirag-pink font-semibold"
                 >
                   Resend OTP
                 </button>
@@ -435,32 +425,21 @@ export default function Book() {
   );
 }
 
-/* -------------------- */
-/* COMPONENTS */
-/* -------------------- */
+/* -------------------- COMPONENTS -------------------- */
 
-const InputField = ({ label, icon, value, ...props }: any) => (
+const InputField = ({ label, icon, ...props }: any) => (
   <div className="flex flex-col">
     <label className="flex items-center gap-2 text-sm font-semibold mb-2 min-h-[24px]">
       {icon && <span className="flex-shrink-0">{icon}</span>}
       {label}
     </label>
-
-    <input
-      {...props}
-      value={value}
-      className="w-full border rounded-xl px-4 py-3"
-    />
+    <input {...props} className="w-full border rounded-xl px-4 py-3" />
   </div>
 );
 
-
 const SelectField = ({ label, children, ...props }: any) => (
   <div className="flex flex-col">
-    <label className="text-sm font-semibold mb-2 min-h-[24px]">
-      {label}
-    </label>
-
+    <label className="text-sm font-semibold mb-2 min-h-[24px]">{label}</label>
     <select {...props} className="w-full border rounded-xl px-4 py-3">
       {children}
     </select>
