@@ -8,8 +8,8 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Portfolio from "./pages/Portfolio";
 import Services from "./pages/Services";
-import Contact from "./pages/Contact";
 import Book from "./pages/Book";
+import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
 
 // ✅ GLOBAL CHATBOT
@@ -25,22 +25,15 @@ const App = () => {
         <Sonner />
 
         <BrowserRouter>
-          {/* ✅ CHATBOT IS GLOBAL */}
           <Chatbot />
 
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/services" element={<Services />} />
-
-            {/* ✅ BOOKING ROUTE */}
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/events" element={<Events />} />
             <Route path="/book" element={<Book />} />
-
-            {/* Existing contact page (email form) */}
-            <Route path="/contact" element={<Contact />} />
-
-            {/* 404 */}
+            <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
