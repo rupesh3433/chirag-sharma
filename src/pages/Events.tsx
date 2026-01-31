@@ -112,6 +112,8 @@ const Events: React.FC = () => {
   });
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(true);
+
   const events = ALL_EVENTS.filter((e) => e.category === activeSection);
   const currentIndex = indexMap[activeSection];
   const stats = getSectionStats(activeSection);
@@ -121,9 +123,33 @@ const Events: React.FC = () => {
       ...prev,
       [activeSection]: i,
     }));
+
+  // Hide scroll hint after user scrolls
+  useEffect(() => {
+    const handleScroll = () => setShowScrollHint(false);
+    window.addEventListener("scroll", handleScroll, { once: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // Reset like state when modal closes
   useEffect(() => {
     if (!selectedEvent) setIsLiked(false);
+  }, [selectedEvent]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (selectedEvent) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = 'var(--scrollbar-width, 0px)';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
   }, [selectedEvent]);
 
   return (
@@ -230,6 +256,25 @@ const Events: React.FC = () => {
           />
         </section>
 
+        {/* ================= SCROLL HINT (Mobile) ================= */}
+        {showScrollHint && (
+          <div className="sm:hidden flex justify-center mt-8 animate-bounce">
+            <div className="flex flex-col items-center gap-2 text-gray-500">
+              <span className="text-xs">Scroll for more</span>
+              <ChevronDown size={20} />
+            </div>
+          </div>
+        )}
+
+        {/* ================= QUICK ACTIONS (Mobile Floating) ================= */}
+        <div className="sm:hidden fixed bottom-24 right-4 z-20 flex flex-col gap-3">
+          <button className="p-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg active:scale-95 transition-transform">
+            <Share2 size={20} />
+          </button>
+          <button className="p-3 rounded-full bg-gray-900/80 backdrop-blur-sm border border-white/10 text-white shadow-lg active:scale-95 transition-transform">
+            <Heart size={20} />
+          </button>
+        </div>
       </main>
 
       {/* ================= EVENT MODAL ================= */}
@@ -275,32 +320,35 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         isClosing ? "opacity-0" : "opacity-100"
       }`}
     >
-      {/* Backdrop */}
+      {/* Backdrop - Non-clickable */}
       <div
-        className="absolute inset-0 bg-black/90 backdrop-blur-sm"
-        onClick={handleClose}
+        className="absolute inset-0 bg-black/90 backdrop-blur-sm pointer-events-none"
       />
 
       {/* Modal */}
       <div 
-        className={`relative z-10 w-full sm:max-w-4xl bg-gray-950 border-0 sm:border border-white/10 sm:rounded-2xl overflow-hidden flex flex-col sm:flex-row max-h-screen sm:max-h-[90vh] transition-transform duration-300 ${
+        className={`relative z-10 w-full h-full sm:h-auto sm:max-w-4xl bg-gray-950 border-0 sm:border-2 sm:border-white/20 sm:rounded-2xl overflow-hidden flex flex-col sm:flex-row sm:max-h-[90vh] transition-transform duration-300 shadow-2xl ${
           isClosing ? "translate-y-full sm:translate-y-0 sm:scale-95" : "translate-y-0 sm:scale-100"
         }`}
+        style={{
+          boxShadow: '0 0 80px rgba(239, 68, 68, 0.2), 0 20px 60px rgba(0, 0, 0, 0.8)'
+        }}
       >
-        {/* Close Button */}
+        {/* Close Button - Red Circle */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 sm:p-2.5 bg-black/70 backdrop-blur-sm rounded-full z-20 hover:bg-black/90 transition-all active:scale-90"
+          className="absolute top-4 right-4 p-3 bg-red-500 rounded-full z-20 hover:bg-red-600 transition-all active:scale-90 shadow-lg hover:shadow-red-500/50 group"
+          aria-label="Close modal"
         >
-          <X className="text-white" size={20} />
+          <X className="text-white group-hover:rotate-90 transition-transform duration-300" size={22} strokeWidth={2.5} />
         </button>
 
         {/* Image Section */}
-        <div className="sm:w-1/2 h-64 sm:h-auto relative">
+        <div className="sm:w-1/2 h-[45vh] sm:h-auto relative bg-gray-900 flex-shrink-0">
           <img
             src={event.poster}
             alt={event.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain sm:object-cover"
           />
           
           {/* Image Overlay with Badge */}
@@ -331,9 +379,9 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         {/* Content Section */}
-        <div className="p-5 sm:p-6 md:p-8 sm:w-1/2 overflow-y-auto">
+        <div className="flex-1 p-5 sm:p-6 md:p-8 sm:w-1/2 overflow-y-auto">
           {/* Title */}
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 pr-8 leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 pr-10 leading-tight">
             {event.title}
           </h2>
 
