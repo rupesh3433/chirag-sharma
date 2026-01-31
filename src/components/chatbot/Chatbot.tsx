@@ -583,7 +583,7 @@ useEffect(() => {
 
       {!open && showHint && (
         <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
-          <div className="relative bg-gradient-to-br from-gray-900 to-black text-white px-4 py-4 rounded-3xl shadow-2xl max-w-[310px] border border-gray-700 animate-slide-in">
+          <div className="relative bg-gradient-to-br from-gray-900 to-black text-white px-4 py-4 mb-2 rounded-3xl shadow-2xl max-w-[310px] border border-gray-700 animate-slide-in">
             <div className="flex items-start gap-3">
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-chirag-pink to-pink-500 flex items-center justify-center flex-shrink-0">
                 <Sparkles size={24} className="text-white" />
@@ -595,7 +595,7 @@ useEffect(() => {
                 </p>
               </div>
             </div>
-            <div className="absolute -bottom-1.5 right-6 w-4 h-4 bg-black transform rotate-45 border-r border-b border-gray-700" />
+            <div className="absolute -bottom-1.5 right-6 w-6 h-6 bg-black transform rotate-45 border-r border-b border-gray-700" />
           </div>
         </div>
       )}
