@@ -40,25 +40,58 @@ const Navbar = () => {
         }`}
       >
         <div className="container-custom flex items-center justify-between">
-          {/* LOGO */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <h1 className="text-2xl sm:text-3xl font-playfair font-bold leading-none">
-              <span className="text-chirag-darkPurple group-hover:text-chirag-peach">Chirag</span>{" "}
-              <span className="bg-gradient-to-r from-chirag-pink via-chirag-peach to-chirag-pink group-hover:text-chirag-darkPurple bg-clip-text text-transparent">
-                Sharma
-              </span>
-            </h1>
+{/* LOGO */}
+<Link to="/" className="flex items-center gap-2 group">
+  <h1 className="flex items-center gap-1 text-2xl sm:text-3xl font-playfair font-bold leading-none">
+    <span
+      className="
+        text-chirag-darkPurple
+        transition-colors duration-200
+      "
+    >
+      Chirag
+    </span>
 
-            {/* Sparkle icon – always visible */}
-            <Sparkles className="w-4 h-4 text-chirag-pink group-hover:text-chirag-darkPurple transition-colors duration-200" />
-          </Link>
+    <span
+      className="
+        font-bold
+        bg-gradient-to-br from-chirag-pink to-pink-400
+        bg-clip-text text-transparent
+        transition-all duration-200
+        group-hover:brightness-110
+      "
+    >
+      Sharma
+    </span>
+  </h1>
+
+  {/* Sparkle icon – matched to gradient midpoint */}
+  <Sparkles
+    className="
+      w-4 h-4
+      text-pink-400
+      transition-all duration-200
+      group-hover:brightness-110
+      group-hover:rotate-6
+    "
+  />
+</Link>
+
 
           {/* DESKTOP MENU */}
           <div className="hidden lg:flex items-center gap-7">
-            <NavLink to="/" active={isActive("/")}>Home</NavLink>
-            <NavLink to="/services" active={isActive("/services")}>Services</NavLink>
-            <NavLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</NavLink>
-            <NavLink to="/events" active={isActive("/events")}>Events</NavLink>
+            <NavLink to="/" active={isActive("/")}>
+              Home
+            </NavLink>
+            <NavLink to="/services" active={isActive("/services")}>
+              Services
+            </NavLink>
+            <NavLink to="/portfolio" active={isActive("/portfolio")}>
+              Portfolio
+            </NavLink>
+            <NavLink to="/events" active={isActive("/events")}>
+              Events
+            </NavLink>
 
             {/* BOOK NOW – BEFORE ABOUT */}
             <Link
@@ -77,14 +110,25 @@ const Navbar = () => {
               Book Now
             </Link>
 
-            <NavLink to="/about" active={isActive("/about")}>About</NavLink>
+            <NavLink to="/about" active={isActive("/about")}>
+              About
+            </NavLink>
           </div>
 
           {/* SOCIAL ICONS */}
           <div className="hidden lg:flex items-center gap-4 ml-4">
-            <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
-            <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
-            <SocialIcon href="https://www.youtube.com/@jinniechiragmua" icon={FaYoutube} />
+            <SocialIcon
+              href="https://www.instagram.com/_jinniechiragmua/"
+              icon={FaInstagram}
+            />
+            <SocialIcon
+              href="https://www.facebook.com/chirag.sharma.5477272/"
+              icon={FaFacebookF}
+            />
+            <SocialIcon
+              href="https://www.youtube.com/@jinniechiragmua"
+              icon={FaYoutube}
+            />
           </div>
 
           {/* MOBILE BUTTON */}
@@ -126,10 +170,18 @@ const Navbar = () => {
           </div>
 
           <nav className="flex flex-col gap-2">
-            <MobileLink to="/" active={isActive("/")}>Home</MobileLink>
-            <MobileLink to="/services" active={isActive("/services")}>Services</MobileLink>
-            <MobileLink to="/portfolio" active={isActive("/portfolio")}>Portfolio</MobileLink>
-            <MobileLink to="/events" active={isActive("/events")}>Events</MobileLink>
+            <MobileLink to="/" active={isActive("/")}>
+              Home
+            </MobileLink>
+            <MobileLink to="/services" active={isActive("/services")}>
+              Services
+            </MobileLink>
+            <MobileLink to="/portfolio" active={isActive("/portfolio")}>
+              Portfolio
+            </MobileLink>
+            <MobileLink to="/events" active={isActive("/events")}>
+              Events
+            </MobileLink>
 
             <Link
               to="/book"
@@ -145,13 +197,24 @@ const Navbar = () => {
               Book Now
             </Link>
 
-            <MobileLink to="/about" active={isActive("/about")}>About</MobileLink>
+            <MobileLink to="/about" active={isActive("/about")}>
+              About
+            </MobileLink>
           </nav>
 
           <div className="mt-auto pt-8 flex gap-5">
-            <SocialIcon href="https://www.instagram.com/_jinniechiragmua/" icon={FaInstagram} />
-            <SocialIcon href="https://www.facebook.com/chirag.sharma.5477272/" icon={FaFacebookF} />
-            <SocialIcon href="https://www.youtube.com/@jinniechiragmua" icon={FaYoutube} />
+            <SocialIcon
+              href="https://www.instagram.com/_jinniechiragmua/"
+              icon={FaInstagram}
+            />
+            <SocialIcon
+              href="https://www.facebook.com/chirag.sharma.5477272/"
+              icon={FaFacebookF}
+            />
+            <SocialIcon
+              href="https://www.youtube.com/@jinniechiragmua"
+              icon={FaYoutube}
+            />
           </div>
         </div>
       </aside>
