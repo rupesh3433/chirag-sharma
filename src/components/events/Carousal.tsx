@@ -26,36 +26,35 @@ const ROTATION_DURATION = "0.4s";
 const ROTATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /* Card - Responsive sizes */
-const CARD_WIDTH_MOBILE = 260;
+const CARD_WIDTH_MOBILE = 280;
 const CARD_WIDTH_DESKTOP = 300;
-const CARD_HEIGHT_MOBILE = 420;
+const CARD_HEIGHT_MOBILE = 400;
 const CARD_HEIGHT_DESKTOP = 500;
 
-/* Ring */
+/* Ring - Desktop 3D */
 const RADIUS_DESKTOP = 820;
-const RADIUS_MOBILE = 500;
 const VISIBLE_ARC = 100;
 
-/* Camera */
+/* Camera - Desktop 3D */
 const PERSPECTIVE_DESKTOP = 3600;
-const PERSPECTIVE_MOBILE = 1800;
 
-/* Depth & dominance */
+/* Depth & dominance - Desktop 3D */
 const FRONT_SCALE_DESKTOP = 1.4;
-const FRONT_SCALE_MOBILE = 1.3;
 const SIDE_SCALE_DESKTOP = 0.3;
-const SIDE_SCALE_MOBILE = 0.2;
 const DEPTH_Y_OFFSET = 90;
 
-/* Lighting */
+/* Lighting - Desktop 3D */
 const BRIGHTNESS_FRONT = 1.5;
 const BRIGHTNESS_BACK = 0.5;
 const BLUR_MAX = 7;
 const SATURATION_MIN = 0.6;
 
-/* Curvature settings */
-const SLICE_COUNT = 1;
+/* Curvature settings - Desktop 3D */
 const MAX_CURVE_ANGLE = 35;
+
+/* Mobile 2D Swipe */
+const SWIPE_THRESHOLD = 50;
+const MOBILE_CARD_GAP = 20;
 
 /* ================= UTILS ================= */
 
@@ -75,6 +74,12 @@ const Carousal: React.FC<CarousalProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [paused, setPaused] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Touch/Swipe state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
   /* ================= RESPONSIVE DETECTION ================= */
 
@@ -92,15 +97,11 @@ const Carousal: React.FC<CarousalProps> = ({
 
   const CARD_WIDTH = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
   const CARD_HEIGHT = isMobile ? CARD_HEIGHT_MOBILE : CARD_HEIGHT_DESKTOP;
-  const RADIUS = isMobile ? RADIUS_MOBILE : RADIUS_DESKTOP;
-  const PERSPECTIVE = isMobile ? PERSPECTIVE_MOBILE : PERSPECTIVE_DESKTOP;
-  const FRONT_SCALE = isMobile ? FRONT_SCALE_MOBILE : FRONT_SCALE_DESKTOP;
-  const SIDE_SCALE = isMobile ? SIDE_SCALE_MOBILE : SIDE_SCALE_DESKTOP;
 
   /* ================= AUTOPLAY ================= */
 
   useEffect(() => {
-    if (paused || total <= 1) return;
+    if (paused || total <= 1 || isDragging) return;
 
     timerRef.current = setInterval(() => {
       setIndex((currentIndex + 1) % total);
@@ -109,7 +110,49 @@ const Carousal: React.FC<CarousalProps> = ({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [paused, currentIndex, total, setIndex]);
+  }, [paused, currentIndex, total, setIndex, isDragging]);
+
+  /* ================= TOUCH/SWIPE HANDLERS ================= */
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setPaused(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    const offset = currentTouch - touchStart;
+    setDragOffset(offset);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) {
+      setIsDragging(false);
+      setDragOffset(0);
+      setPaused(false);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > SWIPE_THRESHOLD;
+    const isRightSwipe = distance < -SWIPE_THRESHOLD;
+
+    if (isLeftSwipe) {
+      setIndex((currentIndex + 1) % total);
+    } else if (isRightSwipe) {
+      setIndex((currentIndex - 1 + total) % total);
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsDragging(false);
+    setDragOffset(0);
+    setPaused(false);
+  };
 
   /* ================= COLORS ================= */
 
@@ -145,11 +188,226 @@ const Carousal: React.FC<CarousalProps> = ({
   const angleStep = 360 / total;
   const wrap = (i: number) => (i + total) % total;
 
-  /* ================= RENDER ================= */
+  /* ================= RENDER MOBILE 2D ================= */
+
+  if (isMobile) {
+    return (
+      <section className="relative h-[550px] flex flex-col items-center justify-center overflow-hidden px-4">
+        {/* AMBIENT LIGHTING */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 40%, ${COLORS.light} 0%, transparent 70%)`,
+            filter: 'blur(60px)',
+            opacity: 0.5
+          }}
+        />
+
+        {/* CARD CONTAINER WITH SWIPE */}
+        <div 
+          className="relative w-full flex-1 flex items-center justify-center overflow-visible"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div 
+            className="relative flex items-center justify-center"
+            style={{
+              width: CARD_WIDTH,
+              height: CARD_HEIGHT,
+            }}
+          >
+            {events.map((event, i) => {
+              const offset = i - currentIndex;
+              const isActive = i === currentIndex;
+              const isAdjacent = Math.abs(offset) === 1;
+              const isVisible = Math.abs(offset) <= 1;
+
+              if (!isVisible) return null;
+
+              const baseTranslateX = offset * (CARD_WIDTH + MOBILE_CARD_GAP);
+              const translateX = baseTranslateX + (isDragging ? dragOffset : 0);
+              const scale = isActive ? 1 : 0.85;
+              const opacity = isActive ? 1 : 0.4;
+              const zIndex = isActive ? 20 : isAdjacent ? 10 : 0;
+
+              return (
+                <div
+                  key={event.id}
+                  className="absolute top-0 left-1/2"
+                  style={{
+                    transform: `
+                      translateX(calc(-50% + ${translateX}px))
+                      scale(${scale})
+                    `,
+                    opacity: opacity,
+                    zIndex: zIndex,
+                    transition: isDragging 
+                      ? 'none' 
+                      : `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
+                    pointerEvents: isActive ? 'auto' : 'none',
+                  }}
+                  onClick={() => isActive && onSelect(event)}
+                >
+                  {/* CARD */}
+                  <div
+                    className="relative rounded-2xl overflow-hidden border border-white/10"
+                    style={{
+                      width: CARD_WIDTH,
+                      height: CARD_HEIGHT,
+                      boxShadow: isActive
+                        ? `0 0 80px ${COLORS.glow}AA, 0 20px 60px rgba(0,0,0,0.6)`
+                        : `0 10px 30px rgba(0,0,0,0.5)`,
+                    }}
+                  >
+                    {/* IMAGE */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${event.poster})`,
+                      }}
+                    />
+
+                    {/* OVERLAY */}
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-t ${
+                        isActive
+                          ? "from-black/95 via-black/40 to-transparent"
+                          : "from-black/95 via-black/70 to-black/50"
+                      }`}
+                    />
+
+                    {/* BADGE */}
+                    {isActive && event.badge && (
+                      <div className="absolute top-4 right-4 z-10">
+                        <span
+                          className={`px-3 py-1.5 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient}`}
+                        >
+                          {event.badge}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* CONTENT */}
+                    <div className="absolute bottom-0 p-5 text-white w-full">
+                      <h3 className="text-xl font-bold mb-2 line-clamp-2">
+                        {event.title}
+                      </h3>
+
+                      <div className="space-y-1.5 text-xs text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={12} /> 
+                          <span className="truncate">{event.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={12} /> 
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                        {event.duration && (
+                          <div className="flex items-center gap-2">
+                            <Clock size={12} /> 
+                            <span className="truncate">{event.duration}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isActive && (
+                        <button
+                          className={`mt-4 w-full py-2.5 text-center text-sm font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
+                        >
+                          View Full Details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CONTROLS AT BOTTOM */}
+        <div className="relative mt-6 mb-4 z-30 w-full max-w-sm">
+          <div className="relative">
+            {/* Glass panel background */}
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
+            
+            {/* Inner glow */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+            
+            {/* Control buttons */}
+            <div className="relative flex items-center justify-center gap-6 px-6 py-4">
+              {/* Left arrow */}
+              <button
+                onClick={() => setIndex(wrap(currentIndex - 1))}
+                className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 active:scale-95 transition-all duration-300 hover:border-white/40"
+              >
+                <ChevronLeft 
+                  size={20} 
+                  className="group-hover:-translate-x-1 transition-transform"
+                />
+              </button>
+
+              {/* Dots indicator */}
+              <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                {events.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setIndex(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      i === currentIndex
+                        ? `w-8 bg-gradient-to-r ${COLORS.gradient} shadow-md`
+                        : "w-2 bg-gray-500 active:bg-gray-400"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Right arrow */}
+              <button
+                onClick={() => setIndex(wrap(currentIndex + 1))}
+                className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 active:scale-95 transition-all duration-300 hover:border-white/40"
+              >
+                <ChevronRight 
+                  size={20} 
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </button>
+            </div>
+
+            {/* Event counter */}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+              <div className="px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300">
+                Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+              </div>
+            </div>
+
+            {/* Decorative glow */}
+            <div 
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-2 blur-xl rounded-full -z-20"
+              style={{
+                background: COLORS.glow,
+                opacity: 0.3
+              }}
+            />
+          </div>
+        </div>
+
+        {/* SWIPE HINT */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2">
+          <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300 animate-pulse">
+            ← Swipe to navigate →
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ================= RENDER DESKTOP 3D ================= */
 
   return (
     <section
-      className="relative h-[600px] md:h-[900px] flex items-center justify-center overflow-hidden"
+      className="relative h-[900px] flex items-center justify-center overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -158,7 +416,7 @@ const Carousal: React.FC<CarousalProps> = ({
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `radial-gradient(circle at 50% 50%, ${COLORS.light} 0%, transparent 60%)`,
-          filter: 'blur(60px)',
+          filter: 'blur(80px)',
           opacity: 0.4
         }}
       />
@@ -167,79 +425,12 @@ const Carousal: React.FC<CarousalProps> = ({
       <div
         className="absolute inset-0"
         style={{
-          perspective: `${PERSPECTIVE}px`,
+          perspective: `${PERSPECTIVE_DESKTOP}px`,
           perspectiveOrigin: "50% 50%",
         }}
       />
 
-      {/* CONTROLS PANEL - ALWAYS AT TOP */}
-      <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-30">
-      <div className="relative">
-          {/* Glass panel background */}
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
-          
-          {/* Inner glow */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-          
-          {/* Control buttons */}
-          <div className="relative flex items-center gap-4 md:gap-8 px-6 md:px-10 py-4 md:py-6">
-            {/* Left arrow */}
-            <button
-              onClick={() => setIndex(wrap(currentIndex - 1))}
-              className="group p-3 md:p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-            >
-              <ChevronLeft 
-                size={isMobile ? 20 : 24} 
-                className="group-hover:-translate-x-1 transition-transform"
-              />
-            </button>
-
-            {/* Dots indicator */}
-            <div className="flex items-center gap-4 md:gap-6 px-4 md:px-6 py-2 md:py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
-              {events.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIndex(i)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    i === currentIndex
-                      ? `w-6 md:w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
-                      : "w-2 bg-gray-500 hover:bg-gray-400"
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Right arrow */}
-            <button
-              onClick={() => setIndex(wrap(currentIndex + 1))}
-              className="group p-3 md:p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-            >
-              <ChevronRight 
-                size={isMobile ? 20 : 24} 
-                className="group-hover:translate-x-1 transition-transform"
-              />
-            </button>
-          </div>
-
-          {/* Floating info badge */}
-          <div className="absolute -bottom-8 md:-bottom-10 left-1/2 -translate-x-1/2">
-            <div className="px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs md:text-sm text-gray-300">
-              Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
-            </div>
-          </div>
-
-          {/* Decorative glow behind panel */}
-          <div 
-            className="absolute -bottom-2 md:-bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-2 md:h-4 blur-xl rounded-full -z-20"
-            style={{
-              background: COLORS.glow,
-              opacity: 0.3
-            }}
-          />
-        </div>
-      </div>
-
-      {/* EARTH EQUATOR RING */}
+      {/* 3D RING */}
       <div
         className="relative w-full h-full flex items-center justify-center"
         style={{
@@ -250,27 +441,24 @@ const Carousal: React.FC<CarousalProps> = ({
       >
         {events.map((event, i) => {
           const angle = i * angleStep;
-
-          const relative =
-            ((angle - currentIndex * angleStep + 540) % 360) - 180;
-
+          const relative = ((angle - currentIndex * angleStep + 540) % 360) - 180;
           const abs = Math.abs(relative);
+          
           if (abs > VISIBLE_ARC) return null;
 
           /* Earth-like depth */
           const depth = Math.cos((abs * Math.PI) / 180);
-          const z = RADIUS * depth;
+          const z = RADIUS_DESKTOP * depth;
           const y = depth * DEPTH_Y_OFFSET;
 
           /* Visual dominance */
           const t = clamp((VISIBLE_ARC - abs) / VISIBLE_ARC, 0, 1);
-          const scale = SIDE_SCALE + t * (FRONT_SCALE - SIDE_SCALE);
-          const brightness =
-            BRIGHTNESS_BACK + t * (BRIGHTNESS_FRONT - BRIGHTNESS_BACK);
+          const scale = SIDE_SCALE_DESKTOP + t * (FRONT_SCALE_DESKTOP - SIDE_SCALE_DESKTOP);
+          const brightness = BRIGHTNESS_BACK + t * (BRIGHTNESS_FRONT - BRIGHTNESS_BACK);
           const blur = (1 - t) * BLUR_MAX;
           const saturation = SATURATION_MIN + t * (1 - SATURATION_MIN);
 
-          /* Curvature based on position */
+          /* Curvature */
           const curveIntensity = (1 - t) * MAX_CURVE_ANGLE;
           const curveDirection = relative > 0 ? 1 : -1;
 
@@ -279,7 +467,7 @@ const Carousal: React.FC<CarousalProps> = ({
           return (
             <div
               key={event.id}
-              className="absolute"
+              className="absolute cursor-pointer"
               style={{
                 transform: `
                   rotateY(${angle}deg)
@@ -288,13 +476,11 @@ const Carousal: React.FC<CarousalProps> = ({
                 `,
                 transformStyle: "preserve-3d",
               }}
-              onClick={() =>
-                isActive ? onSelect(event) : setIndex(i)
-              }
+              onClick={() => isActive ? onSelect(event) : setIndex(i)}
             >
-              {/* CARD (tangent to Earth surface) */}
+              {/* CARD */}
               <div
-                className="relative rounded-2xl md:rounded-3xl overflow-hidden border border-white/10"
+                className="relative rounded-3xl overflow-hidden border border-white/10"
                 style={{
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
@@ -305,39 +491,22 @@ const Carousal: React.FC<CarousalProps> = ({
                     saturate(${saturation})
                   `,
                   boxShadow: isActive
-                    ? `0 0 ${isMobile ? '100px' : '180px'} ${COLORS.glow}AA`
+                    ? `0 0 180px ${COLORS.glow}AA, 0 30px 80px rgba(0,0,0,0.7)`
                     : `0 15px 40px rgba(0,0,0,0.55)`,
                   transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
                 }}
               >
-                {/* CURVED IMAGE SLICES */}
-                <div className="absolute inset-0 flex">
-                  {Array.from({ length: SLICE_COUNT }).map((_, sliceIndex) => {
-                    const position = (sliceIndex / (SLICE_COUNT - 1)) * 2 - 1;
-                    const sliceCurve = curveIntensity * Math.abs(position) * curveDirection;
-                    
-                    return (
-                      <div
-                        key={sliceIndex}
-                        className="h-full"
-                        style={{
-                          width: `${100 / SLICE_COUNT}%`,
-                          backgroundImage: `url(${event.poster})`,
-                          backgroundSize: `${CARD_WIDTH * SLICE_COUNT}px 100%`,
-                          backgroundPositionX: `-${sliceIndex * (CARD_WIDTH / SLICE_COUNT)}px`,
-                          backgroundPositionY: 'center',
-                          backgroundRepeat: 'no-repeat',
-                          transform: `rotateY(${sliceCurve}deg)`,
-                          transformOrigin: position > 0 ? 'left center' : 'right center',
-                          transition: `transform ${ROTATION_DURATION} ${ROTATION_EASING}`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                {/* IMAGE WITH SUBTLE CURVE */}
+                <div 
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${event.poster})`,
+                    transform: `rotateY(${curveIntensity * curveDirection * 0.1}deg)`,
+                  }}
+                />
 
                 {/* EDGE SHADING */}
-                <div className="absolute inset-0 bg-gradient-to-l from-black/65 via-transparent to-black/65" />
+                <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-transparent to-black/40" />
 
                 {/* OVERLAY */}
                 <div
@@ -350,9 +519,9 @@ const Carousal: React.FC<CarousalProps> = ({
 
                 {/* BADGE */}
                 {isActive && event.badge && (
-                  <div className="absolute top-4 md:top-5 right-4 md:right-5 z-10">
+                  <div className="absolute top-5 right-5 z-10">
                     <span
-                      className={`px-3 md:px-4 py-1.5 md:py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient}`}
+                      className={`px-4 py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
                     >
                       {event.badge}
                     </span>
@@ -360,23 +529,23 @@ const Carousal: React.FC<CarousalProps> = ({
                 )}
 
                 {/* CONTENT */}
-                <div className="absolute bottom-0 p-5 md:p-7 text-white">
-                  <h3 className="text-lg md:text-2xl font-bold mb-2 md:mb-3">
+                <div className="absolute bottom-0 p-7 text-white">
+                  <h3 className="text-2xl font-bold mb-3 line-clamp-2">
                     {event.title}
                   </h3>
 
-                  <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-300">
-                    <div className="flex items-center gap-1.5 md:gap-2">
-                      <Calendar size={isMobile ? 12 : 14} /> 
+                  <div className="space-y-2 text-sm text-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} /> 
                       <span className="truncate">{event.date}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 md:gap-2">
-                      <MapPin size={isMobile ? 12 : 14} /> 
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} /> 
                       <span className="truncate">{event.location}</span>
                     </div>
                     {event.duration && (
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <Clock size={isMobile ? 12 : 14} /> 
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} /> 
                         <span className="truncate">{event.duration}</span>
                       </div>
                     )}
@@ -384,7 +553,7 @@ const Carousal: React.FC<CarousalProps> = ({
 
                   {isActive && (
                     <div
-                      className={`mt-4 md:mt-5 py-2.5 md:py-3 text-center text-sm md:text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient}`}
+                      className={`mt-5 py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl cursor-pointer hover:shadow-2xl transition-shadow`}
                     >
                       View Full Details
                     </div>
@@ -396,14 +565,72 @@ const Carousal: React.FC<CarousalProps> = ({
         })}
       </div>
 
-      {/* MOBILE SWIPE HINT (Only on mobile) */}
-      {isMobile && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-          <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300">
-            ← Swipe or tap to navigate →
+      {/* CONTROLS AT BOTTOM */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+        <div className="relative">
+          {/* Glass panel background */}
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
+          
+          {/* Inner glow */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          
+          {/* Control buttons */}
+          <div className="relative flex items-center gap-8 px-10 py-6">
+            {/* Left arrow */}
+            <button
+              onClick={() => setIndex(wrap(currentIndex - 1))}
+              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+            >
+              <ChevronLeft 
+                size={24} 
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+            </button>
+
+            {/* Dots indicator */}
+            <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+              {events.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIndex(i)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    i === currentIndex
+                      ? `w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
+                      : "w-2 bg-gray-500 hover:bg-gray-400"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Right arrow */}
+            <button
+              onClick={() => setIndex(wrap(currentIndex + 1))}
+              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+            >
+              <ChevronRight 
+                size={24} 
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </button>
           </div>
+
+          {/* Event counter */}
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
+            <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
+              Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+            </div>
+          </div>
+
+          {/* Decorative glow */}
+          <div 
+            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 blur-xl rounded-full -z-20"
+            style={{
+              background: COLORS.glow,
+              opacity: 0.3
+            }}
+          />
         </div>
-      )}
+      </div>
     </section>
   );
 };
