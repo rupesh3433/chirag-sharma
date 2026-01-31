@@ -192,7 +192,7 @@ const Carousal: React.FC<CarousalProps> = ({
 
   if (isMobile) {
     return (
-      <section className="relative h-[550px] flex flex-col items-center justify-center overflow-hidden px-4">
+      <section className="relative h-[550px] flex flex-col items-center justify-center overflow-hidden px-4 py-5">
         {/* AMBIENT LIGHTING */}
         <div 
           className="absolute inset-0 pointer-events-none"

@@ -112,8 +112,6 @@ const Events: React.FC = () => {
   });
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isLiked, setIsLiked] = useState(false);
-  const [showScrollHint, setShowScrollHint] = useState(true);
-
   const events = ALL_EVENTS.filter((e) => e.category === activeSection);
   const currentIndex = indexMap[activeSection];
   const stats = getSectionStats(activeSection);
@@ -123,14 +121,6 @@ const Events: React.FC = () => {
       ...prev,
       [activeSection]: i,
     }));
-
-  // Hide scroll hint after user scrolls
-  useEffect(() => {
-    const handleScroll = () => setShowScrollHint(false);
-    window.addEventListener("scroll", handleScroll, { once: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   // Reset like state when modal closes
   useEffect(() => {
     if (!selectedEvent) setIsLiked(false);
@@ -240,25 +230,6 @@ const Events: React.FC = () => {
           />
         </section>
 
-        {/* ================= SCROLL HINT (Mobile) ================= */}
-        {showScrollHint && (
-          <div className="sm:hidden flex justify-center mt-8 animate-bounce">
-            <div className="flex flex-col items-center gap-2 text-gray-500">
-              <span className="text-xs">Scroll for more</span>
-              <ChevronDown size={20} />
-            </div>
-          </div>
-        )}
-
-        {/* ================= QUICK ACTIONS (Mobile Floating) ================= */}
-        <div className="sm:hidden fixed bottom-24 right-4 z-20 flex flex-col gap-3">
-          <button className="p-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg active:scale-95 transition-transform">
-            <Share2 size={20} />
-          </button>
-          <button className="p-3 rounded-full bg-gray-900/80 backdrop-blur-sm border border-white/10 text-white shadow-lg active:scale-95 transition-transform">
-            <Heart size={20} />
-          </button>
-        </div>
       </main>
 
       {/* ================= EVENT MODAL ================= */}
