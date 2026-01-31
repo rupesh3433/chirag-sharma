@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 const servicesSections = [
   {
     title: "Bridal Makeup Services",
-    images: ["/photos/chirag1.PNG", "/photos/chirag2.PNG"],
+    images: ["/photos/chirag1.jpeg", "/photos/chirag2.jpeg"],
     imageHeight: "h-[520px] lg:h-[520px]",
     packages: [
       {
@@ -47,7 +47,7 @@ const servicesSections = [
 
   {
     title: "Party Makeup Services",
-    images: ["/photos/chirag4.PNG"],
+    images: ["/photos/chirag4.jpeg"],
     imageHeight: "h-[460px] lg:h-[540px]",
     imagePosition: "50% 35%",
     packages: [
@@ -68,7 +68,7 @@ const servicesSections = [
 
   {
     title: "Haldi & Mehendi Makeup Services",
-    images: ["/photos/chirag5.PNG"],
+    images: ["/photos/chirag5.jpeg"],
     imageHeight: "h-[440px] lg:h-[540px]",
     imagePosition: "50% 18%",
     packages: [
@@ -89,7 +89,7 @@ const servicesSections = [
 
   {
     title: "Groom Makeup Services",
-    images: ["/photos/chirag3.PNG"],
+    images: ["/photos/chirag3.jpeg"],
     imageHeight: "h-[420px] lg:h-[670px]",
     imagePosition: "50% 25%",
     packages: [

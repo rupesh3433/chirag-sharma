@@ -15,7 +15,7 @@ const servicesData = [
     title: "Bridal Makeup",
     description:
       "Luxury bridal makeup services by Celebrity Makeup Artist Chirag Sharma, crafted with premium products and a flawless, long-lasting finish.",
-    image: "/photos/chirag1.PNG",
+    image: "/photos/chirag1.jpeg",
     features: [
       "Chirag’s Signature Bridal Makeup",
       "Luxury Bridal Makeup (HD / Brush)",
@@ -28,7 +28,7 @@ const servicesData = [
     title: "Party Makeup",
     description:
       "Glamorous party makeup for receptions, engagements, cocktails, and celebrations, tailored to your outfit and occasion.",
-    image: "/photos/chirag2.PNG",
+    image: "/photos/chirag2.jpeg",
     features: [
       "Party Makeup by Chirag Sharma",
       "Party Makeup by Senior Artist",
@@ -41,7 +41,7 @@ const servicesData = [
     title: "Haldi & Mehendi Makeup",
     description:
       "Bright, fresh, and elegant makeup for Haldi and Mehendi ceremonies, designed to enhance natural beauty.",
-    image: "/photos/chirag3.PNG",
+    image: "/photos/chirag3.jpeg",
     features: [
       "Haldi / Mehendi Makeup by Chirag Sharma",
       "Haldi / Mehendi Makeup by Senior Artist",
@@ -54,7 +54,7 @@ const servicesData = [
     title: "Groom Makeup",
     description:
       "Professional groom makeup services ensuring a sharp, photo-ready look for weddings and receptions.",
-    image: "/photos/chirag4.PNG",
+    image: "/photos/chirag4.jpeg",
     features: [
       "Picture Perfect Photo-Ready Makeup",
       "Wedding Reception Groom Makeup",
@@ -66,10 +66,10 @@ const servicesData = [
 
 
 const eventDummyImages = [
-  "/photos/chirag1.PNG",
-  "/photos/chirag2.PNG",
-  "/photos/chirag3.PNG",
-  "/photos/chirag4.PNG",
+  "/photos/chirag1.jpeg",
+  "/photos/chirag2.jpeg",
+  "/photos/chirag3.jpeg",
+  "/photos/chirag4.jpeg",
 ];
 
 const portfolioItems = [
@@ -104,33 +104,6 @@ const portfolioItems = [
     image:
       "https://images.unsplash.com/photo-1583266999030-4fba155cca8e?auto=format&fit=crop&q=80&w=2000",
     description: "Beautiful designs that tell your unique story",
-  },
-];
-
-const videoPortfolioItems = [
-  {
-    id: 1,
-    title: "Bridal Transformation",
-    videoUrl: "https://www.instagram.com/p/CrGyxUDI7dl/embed",
-    thumbnailUrl:
-      "https://images.unsplash.com/photo-1594489573233-c2d4e4e5f106?auto=format&fit=crop&q=80&w=2000",
-    instagramLink: "https://www.instagram.com/p/CrGyxUDI7dl/",
-  },
-  {
-    id: 2,
-    title: "Makeup Tutorial",
-    videoUrl: "https://www.instagram.com/p/CqWzc6DIvLp/embed",
-    thumbnailUrl:
-      "https://images.unsplash.com/photo-1542145748-72b2eb8576cd?auto=format&fit=crop&q=80&w=2000",
-    instagramLink: "https://www.instagram.com/p/CqWzc6DIvLp/",
-  },
-  {
-    id: 3,
-    title: "Behind the Scenes",
-    videoUrl: "https://www.instagram.com/p/Cp9ZsHIovZ3/embed",
-    thumbnailUrl:
-      "https://images.unsplash.com/photo-1588731247530-4076fc99173e?auto=format&fit=crop&q=80&w=2000",
-    instagramLink: "https://www.instagram.com/p/Cp9ZsHIovZ3/",
   },
 ];
 
