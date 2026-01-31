@@ -19,28 +19,33 @@ interface CarousalProps {
 }
 
 /* ================= GLOBAL CONTROLS ================= */
-/* 🔧 TUNE EVERYTHING FROM HERE */
 
 /* Timing */
 const AUTOPLAY_DELAY = 4500;
 const ROTATION_DURATION = "0.4s";
 const ROTATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-/* Card */
-const CARD_WIDTH = 300;
-const CARD_HEIGHT = 500;
+/* Card - Responsive sizes */
+const CARD_WIDTH_MOBILE = 260;
+const CARD_WIDTH_DESKTOP = 300;
+const CARD_HEIGHT_MOBILE = 420;
+const CARD_HEIGHT_DESKTOP = 500;
 
 /* Ring */
-const RADIUS = 820;                 // Earth radius
-const VISIBLE_ARC = 100;            // degrees visible left+right
+const RADIUS_DESKTOP = 820;
+const RADIUS_MOBILE = 500;
+const VISIBLE_ARC = 100;
 
 /* Camera */
-const PERSPECTIVE = 3600;
+const PERSPECTIVE_DESKTOP = 3600;
+const PERSPECTIVE_MOBILE = 1800;
 
 /* Depth & dominance */
-const FRONT_SCALE = 1.4;
-const SIDE_SCALE = 0.3;
-const DEPTH_Y_OFFSET = 90;          // subtle lift when coming front
+const FRONT_SCALE_DESKTOP = 1.4;
+const FRONT_SCALE_MOBILE = 1.3;
+const SIDE_SCALE_DESKTOP = 0.3;
+const SIDE_SCALE_MOBILE = 0.2;
+const DEPTH_Y_OFFSET = 90;
 
 /* Lighting */
 const BRIGHTNESS_FRONT = 1.5;
@@ -49,8 +54,8 @@ const BLUR_MAX = 7;
 const SATURATION_MIN = 0.6;
 
 /* Curvature settings */
-const SLICE_COUNT = 1;              // Number of slices for curved effect
-const MAX_CURVE_ANGLE = 35;         // Maximum curve angle for side slices
+const SLICE_COUNT = 1;
+const MAX_CURVE_ANGLE = 35;
 
 /* ================= UTILS ================= */
 
@@ -69,6 +74,28 @@ const Carousal: React.FC<CarousalProps> = ({
   const total = events.length;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [paused, setPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  /* ================= RESPONSIVE DETECTION ================= */
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  /* ================= RESPONSIVE VALUES ================= */
+
+  const CARD_WIDTH = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
+  const CARD_HEIGHT = isMobile ? CARD_HEIGHT_MOBILE : CARD_HEIGHT_DESKTOP;
+  const RADIUS = isMobile ? RADIUS_MOBILE : RADIUS_DESKTOP;
+  const PERSPECTIVE = isMobile ? PERSPECTIVE_MOBILE : PERSPECTIVE_DESKTOP;
+  const FRONT_SCALE = isMobile ? FRONT_SCALE_MOBILE : FRONT_SCALE_DESKTOP;
+  const SIDE_SCALE = isMobile ? SIDE_SCALE_MOBILE : SIDE_SCALE_DESKTOP;
 
   /* ================= AUTOPLAY ================= */
 
@@ -122,7 +149,7 @@ const Carousal: React.FC<CarousalProps> = ({
 
   return (
     <section
-      className="relative h-[900px] flex items-center justify-center overflow-hidden"
+      className="relative h-[600px] md:h-[900px] flex items-center justify-center overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -145,6 +172,73 @@ const Carousal: React.FC<CarousalProps> = ({
         }}
       />
 
+      {/* CONTROLS PANEL - ALWAYS AT TOP */}
+      <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-30">
+      <div className="relative">
+          {/* Glass panel background */}
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
+          
+          {/* Inner glow */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          
+          {/* Control buttons */}
+          <div className="relative flex items-center gap-4 md:gap-8 px-6 md:px-10 py-4 md:py-6">
+            {/* Left arrow */}
+            <button
+              onClick={() => setIndex(wrap(currentIndex - 1))}
+              className="group p-3 md:p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+            >
+              <ChevronLeft 
+                size={isMobile ? 20 : 24} 
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+            </button>
+
+            {/* Dots indicator */}
+            <div className="flex items-center gap-4 md:gap-6 px-4 md:px-6 py-2 md:py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+              {events.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIndex(i)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    i === currentIndex
+                      ? `w-6 md:w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
+                      : "w-2 bg-gray-500 hover:bg-gray-400"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Right arrow */}
+            <button
+              onClick={() => setIndex(wrap(currentIndex + 1))}
+              className="group p-3 md:p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+            >
+              <ChevronRight 
+                size={isMobile ? 20 : 24} 
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </button>
+          </div>
+
+          {/* Floating info badge */}
+          <div className="absolute -bottom-8 md:-bottom-10 left-1/2 -translate-x-1/2">
+            <div className="px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs md:text-sm text-gray-300">
+              Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+            </div>
+          </div>
+
+          {/* Decorative glow behind panel */}
+          <div 
+            className="absolute -bottom-2 md:-bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-2 md:h-4 blur-xl rounded-full -z-20"
+            style={{
+              background: COLORS.glow,
+              opacity: 0.3
+            }}
+          />
+        </div>
+      </div>
+
       {/* EARTH EQUATOR RING */}
       <div
         className="relative w-full h-full flex items-center justify-center"
@@ -164,7 +258,7 @@ const Carousal: React.FC<CarousalProps> = ({
           if (abs > VISIBLE_ARC) return null;
 
           /* Earth-like depth */
-          const depth = Math.cos((abs * Math.PI) / 180); // -1..1
+          const depth = Math.cos((abs * Math.PI) / 180);
           const z = RADIUS * depth;
           const y = depth * DEPTH_Y_OFFSET;
 
@@ -200,7 +294,7 @@ const Carousal: React.FC<CarousalProps> = ({
             >
               {/* CARD (tangent to Earth surface) */}
               <div
-                className="relative rounded-3xl overflow-hidden border border-white/10"
+                className="relative rounded-2xl md:rounded-3xl overflow-hidden border border-white/10"
                 style={{
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
@@ -211,18 +305,15 @@ const Carousal: React.FC<CarousalProps> = ({
                     saturate(${saturation})
                   `,
                   boxShadow: isActive
-                    ? `0 0 180px ${COLORS.glow}AA`
-                    : `0 25px 70px rgba(0,0,0,0.55)`,
+                    ? `0 0 ${isMobile ? '100px' : '180px'} ${COLORS.glow}AA`
+                    : `0 15px 40px rgba(0,0,0,0.55)`,
                   transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
                 }}
               >
-                {/* CURVED IMAGE SLICES (FIXED: No duplicate images) */}
+                {/* CURVED IMAGE SLICES */}
                 <div className="absolute inset-0 flex">
                   {Array.from({ length: SLICE_COUNT }).map((_, sliceIndex) => {
-                    // Calculate position from -1 (left) to 1 (right)
                     const position = (sliceIndex / (SLICE_COUNT - 1)) * 2 - 1;
-                    
-                    // Center slices have less curve, edges have more
                     const sliceCurve = curveIntensity * Math.abs(position) * curveDirection;
                     
                     return (
@@ -245,7 +336,7 @@ const Carousal: React.FC<CarousalProps> = ({
                   })}
                 </div>
 
-                {/* EDGE SHADING — makes belt continuous */}
+                {/* EDGE SHADING */}
                 <div className="absolute inset-0 bg-gradient-to-l from-black/65 via-transparent to-black/65" />
 
                 {/* OVERLAY */}
@@ -259,9 +350,9 @@ const Carousal: React.FC<CarousalProps> = ({
 
                 {/* BADGE */}
                 {isActive && event.badge && (
-                  <div className="absolute top-5 right-5 z-10">
+                  <div className="absolute top-4 md:top-5 right-4 md:right-5 z-10">
                     <span
-                      className={`px-4 py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient}`}
+                      className={`px-3 md:px-4 py-1.5 md:py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient}`}
                     >
                       {event.badge}
                     </span>
@@ -269,28 +360,31 @@ const Carousal: React.FC<CarousalProps> = ({
                 )}
 
                 {/* CONTENT */}
-                <div className="absolute bottom-0 p-7 text-white">
-                  <h3 className="text-2xl font-bold mb-3">
+                <div className="absolute bottom-0 p-5 md:p-7 text-white">
+                  <h3 className="text-lg md:text-2xl font-bold mb-2 md:mb-3">
                     {event.title}
                   </h3>
 
-                  <div className="space-y-2 text-sm text-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} /> {event.date}
+                  <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-300">
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Calendar size={isMobile ? 12 : 14} /> 
+                      <span className="truncate">{event.date}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} /> {event.location}
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <MapPin size={isMobile ? 12 : 14} /> 
+                      <span className="truncate">{event.location}</span>
                     </div>
                     {event.duration && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} /> {event.duration}
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <Clock size={isMobile ? 12 : 14} /> 
+                        <span className="truncate">{event.duration}</span>
                       </div>
                     )}
                   </div>
 
                   {isActive && (
                     <div
-                      className={`mt-5 py-3 text-center font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient}`}
+                      className={`mt-4 md:mt-5 py-2.5 md:py-3 text-center text-sm md:text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient}`}
                     >
                       View Full Details
                     </div>
@@ -302,72 +396,14 @@ const Carousal: React.FC<CarousalProps> = ({
         })}
       </div>
 
-      {/* FLOATING GLASS CONTROLS PANEL */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-        <div className="relative">
-          {/* Glass panel background */}
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
-          
-          {/* Inner glow */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-          
-          {/* Control buttons */}
-          <div className="relative flex items-center gap-8 px-10 py-6">
-            {/* Left arrow */}
-            <button
-              onClick={() => setIndex(wrap(currentIndex - 1))}
-              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-            >
-              <ChevronLeft 
-                size={24} 
-                className="group-hover:-translate-x-1 transition-transform"
-              />
-            </button>
-
-            {/* Dots indicator */}
-            <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
-              {events.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIndex(i)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    i === currentIndex
-                      ? `w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
-                      : "w-2 bg-gray-500 hover:bg-gray-400"
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Right arrow */}
-            <button
-              onClick={() => setIndex(wrap(currentIndex + 1))}
-              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-            >
-              <ChevronRight 
-                size={24} 
-                className="group-hover:translate-x-1 transition-transform"
-              />
-            </button>
+      {/* MOBILE SWIPE HINT (Only on mobile) */}
+      {isMobile && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300">
+            ← Swipe or tap to navigate →
           </div>
-
-          {/* Floating info badge */}
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-            <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
-              Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
-            </div>
-          </div>
-
-          {/* Decorative glow behind panel */}
-          <div 
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 blur-xl rounded-full -z-20"
-            style={{
-              background: COLORS.glow,
-              opacity: 0.3
-            }}
-          />
         </div>
-      </div>
+      )}
     </section>
   );
 };
