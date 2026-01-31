@@ -31,7 +31,7 @@ const Navbar = () => {
 
   return (
     <>
-      {/* NAVBAR */}
+      {/* ================= NAVBAR ================= */}
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-200 ${
           isScrolled
@@ -40,45 +40,36 @@ const Navbar = () => {
         }`}
       >
         <div className="container-custom flex items-center justify-between">
-{/* LOGO */}
-<Link to="/" className="flex items-center gap-2 group">
-  <h1 className="flex items-center gap-1 text-2xl sm:text-3xl font-playfair font-bold leading-none">
-    <span
-      className="
-        text-chirag-darkPurple
-        transition-colors duration-200
-      "
-    >
-      Chirag
-    </span>
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-2 group">
+            <h1 className="flex items-center gap-1 text-2xl sm:text-3xl font-playfair font-bold leading-none">
+              <span className="text-chirag-darkPurple">Chirag</span>
 
-    <span
-      className="
-        font-bold
-        bg-gradient-to-br from-chirag-pink to-pink-400
-        bg-clip-text text-transparent
-        transition-all duration-200
-        group-hover:brightness-110
-      "
-    >
-      Sharma
-    </span>
-  </h1>
+              <span
+                className="
+                  font-bold
+                  bg-gradient-to-br from-chirag-pink to-pink-400
+                  bg-clip-text text-transparent
+                  transition-all duration-200
+                  group-hover:brightness-110
+                "
+              >
+                Sharma
+              </span>
+            </h1>
 
-  {/* Sparkle icon – matched to gradient midpoint */}
-  <Sparkles
-    className="
-      w-4 h-4
-      text-pink-400
-      transition-all duration-200
-      group-hover:brightness-110
-      group-hover:rotate-6
-    "
-  />
-</Link>
+            <Sparkles
+              className="
+                w-4 h-4
+                text-pink-400
+                transition-all duration-200
+                group-hover:brightness-110
+                group-hover:rotate-6
+              "
+            />
+          </Link>
 
-
-          {/* DESKTOP MENU */}
+          {/* ================= DESKTOP MENU ================= */}
           <div className="hidden lg:flex items-center gap-7">
             <NavLink to="/" active={isActive("/")}>
               Home
@@ -93,18 +84,19 @@ const Navbar = () => {
               Events
             </NavLink>
 
-            {/* BOOK NOW – BEFORE ABOUT */}
+            {/* DESKTOP BOOK NOW */}
             <Link
               to="/book"
               className="
-                px-6 py-2 rounded-full
+                px-4 py-1.5 rounded-full
                 font-semibold text-sm
-               bg-gradient-to-br from-chirag-pink to-pink-200
-                text-chirag-darkPurple
+                bg-gradient-to-br from-chirag-pink to-pink-400
+                text-stone-600
                 shadow-sm
                 transition-all duration-200
-                hover:bg-chirag-peach
+                hover:brightness-110
                 hover:shadow-md
+                active:scale-[0.98]
               "
             >
               Book Now
@@ -131,7 +123,7 @@ const Navbar = () => {
             />
           </div>
 
-          {/* MOBILE BUTTON */}
+          {/* MOBILE TOGGLE */}
           <button
             className="lg:hidden text-chirag-darkPurple p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -142,7 +134,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* OVERLAY */}
+      {/* ================= OVERLAY ================= */}
       {isMenuOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"
@@ -150,7 +142,7 @@ const Navbar = () => {
         />
       )}
 
-      {/* MOBILE MENU */}
+      {/* ================= MOBILE MENU ================= */}
       <aside
         className={`fixed top-0 right-0 h-full w-[300px] bg-white z-50 shadow-xl
         transition-transform duration-200 lg:hidden ${
@@ -183,15 +175,19 @@ const Navbar = () => {
               Events
             </MobileLink>
 
+            {/* MOBILE BOOK NOW — FIXED */}
             <Link
               to="/book"
               className="
-                mt-6 text-center px-5 py-3 rounded-xl
+                px-5 py-2
+                rounded-xl
+                text-center
                 font-semibold
-                bg-chirag-pink/80
-                text-chirag-darkPurple
+ text-stone-600                bg-gradient-to-br from-chirag-pink to-pink-400
+                shadow-md
                 transition-all duration-200
-                hover:bg-chirag-peach
+                hover:brightness-110
+                active:scale-[0.98]
               "
             >
               Book Now
