@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 
 // ✅ GLOBAL CHATBOT
 import Chatbot from "@/components/chatbot/Chatbot";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => {
         <Sonner />
 
         <BrowserRouter>
+        <ScrollToTop />
           <Chatbot />
 
           <Routes>
