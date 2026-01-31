@@ -51,7 +51,7 @@ const Navbar = () => {
                   bg-gradient-to-br from-chirag-pink to-pink-400
                   bg-clip-text text-transparent
                   transition-all duration-200
-                  group-hover:brightness-110
+                  group-hover:brightness-95
                 "
               >
                 Sharma
@@ -61,7 +61,7 @@ const Navbar = () => {
             <Sparkles
               className="
                 w-4 h-4
-                text-pink-400
+                text-pink-700
                 transition-all duration-200
                 group-hover:brightness-110
                 group-hover:rotate-6
@@ -90,8 +90,8 @@ const Navbar = () => {
               className="
                 px-4 py-1.5 rounded-full
                 font-semibold text-sm
-                bg-gradient-to-br from-chirag-pink to-pink-400
-                text-stone-600
+                bg-gradient-to-br from-chirag-pink to-pink-200
+                text-chirag-darkPurple
                 shadow-sm
                 transition-all duration-200
                 hover:brightness-110
@@ -182,8 +182,8 @@ const Navbar = () => {
                 px-5 py-2
                 rounded-xl
                 text-center
-                font-semibold
- text-stone-600                bg-gradient-to-br from-chirag-pink to-pink-400
+                font-semibold                 text-chirag-darkPurple
+               bg-gradient-to-br from-chirag-pink to-pink-200
                 shadow-md
                 transition-all duration-200
                 hover:brightness-110
