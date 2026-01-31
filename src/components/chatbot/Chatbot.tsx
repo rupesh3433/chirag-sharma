@@ -38,16 +38,20 @@ interface AgentResponse {
   chat_mode: "normal" | "agent";
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 const ASSISTANT_AVATAR = "/photos/yadavIcon.jpg";
 
 const Chatbot = () => {
-  const [open, setOpen] = useState(
-    () => localStorage.getItem("chatbot_open") === "true"
-  );
   const [fullscreen, setFullscreen] = useState(
     () => localStorage.getItem("chatbot_fullscreen") === "true"
   );
+  
+  const [open, setOpen] = useState(() => {
+    const wasFullscreen =
+      localStorage.getItem("chatbot_fullscreen") === "true";
+    return wasFullscreen; // open ONLY if fullscreen
+  });
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,14 +68,37 @@ const Chatbot = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const chatbotRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem("chatbot_open", String(open));
-  }, [open]);
 
-  useEffect(() => {
-    localStorage.setItem("chatbot_fullscreen", String(fullscreen));
-  }, [fullscreen]);
+// Persist fullscreen ONLY
+useEffect(() => {
+  localStorage.setItem("chatbot_fullscreen", String(fullscreen));
+}, [fullscreen]);
+
+
+useEffect(() => {
+  const handleOutsideTouch = (e: TouchEvent) => {
+    if (window.innerWidth >= 768) return;
+    if (!open || fullscreen) return;
+
+    const target = e.target as Node;
+
+    if (chatbotRef.current && !chatbotRef.current.contains(target)) {
+      setOpen(false);
+    }
+  };
+
+  document.addEventListener("touchstart", handleOutsideTouch, {
+    passive: true,
+  });
+
+  return () => {
+    document.removeEventListener("touchstart", handleOutsideTouch);
+  };
+}, [open, fullscreen]);
+
+
 
   useEffect(() => {
     if (!open) {
@@ -604,7 +631,7 @@ const Chatbot = () => {
       )}
 
       {open && (
-        <div
+        <div  ref={chatbotRef}
           className={`fixed z-[9999] flex flex-col transition-all duration-300
           ${
             fullscreen
