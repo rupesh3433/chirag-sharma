@@ -558,7 +558,7 @@ const Chatbot = () => {
         <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[9999]">
           <div className="relative bg-gradient-to-br from-gray-900 to-black text-white px-4 py-4 rounded-3xl shadow-2xl max-w-[310px] border border-gray-700 animate-slide-in">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-chirag-pink to-pink-700 flex items-center justify-center flex-shrink-0">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-chirag-pink to-pink-500 flex items-center justify-center flex-shrink-0">
                 <Sparkles size={24} className="text-white" />
               </div>
               <div>
@@ -621,7 +621,7 @@ const Chatbot = () => {
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="relative flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-chirag-pink to-pink-700 flex items-center justify-center shadow-lg">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-chirag-pink to-pink-500 flex items-center justify-center shadow-lg">
                   <Sparkles size={18} className="text-white" />
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
@@ -745,7 +745,7 @@ const Chatbot = () => {
           {/* Empty State */}
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mb-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-100 to-chirag-pink flex items-center justify-center mb-4">
                 {chatMode === "agent" ? (
                   <Calendar size={32} className="text-purple-600" />
                 ) : (
@@ -777,7 +777,7 @@ const Chatbot = () => {
                       const quickMessage = "What services do you offer?";
                       setInput(quickMessage);
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                    className="px-4 py-2 bg-gradient-to-r from-chirag-pink to-pink-300 text-chirag-darkPurple rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                   >
                     Ask About Services
                   </button>
