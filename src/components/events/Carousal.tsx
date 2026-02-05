@@ -20,41 +20,76 @@ interface CarousalProps {
 
 /* ================= GLOBAL CONTROLS ================= */
 
-/* Timing */
-const AUTOPLAY_DELAY = 4500;
-const ROTATION_DURATION = "0.4s";
-const ROTATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+/* ==================== SHARED SETTINGS (All Layouts) ==================== */
+const AUTOPLAY_DELAY = 4500;               // Auto-rotation delay in ms
+const ROTATION_DURATION = "0.4s";          // Transition duration
+const ROTATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)"; // Smooth easing
 
-/* Card - Responsive sizes */
+/* Card sizes - Responsive */
 const CARD_WIDTH_MOBILE = 280;
 const CARD_WIDTH_DESKTOP = 300;
 const CARD_HEIGHT_MOBILE = 400;
 const CARD_HEIGHT_DESKTOP = 500;
 
-/* Ring - Desktop 3D */
-const RADIUS_DESKTOP = 820;
-const VISIBLE_ARC = 100;
+/* ==================== DESKTOP 3D CIRCULAR CAROUSEL (5+ events) ==================== */
 
-/* Camera - Desktop 3D */
-const PERSPECTIVE_DESKTOP = 3600;
+/* 3D Ring Setup */
+const RADIUS_DESKTOP = 820;                // Radius of the circular ring
+const VISIBLE_ARC = 90;                    // Max angle to show cards (hides far cards)
+const PERSPECTIVE_DESKTOP = 3600;          // 3D perspective depth
 
-/* Depth & dominance - Desktop 3D */
-const FRONT_SCALE_DESKTOP = 1.4;
-const SIDE_SCALE_DESKTOP = 0.3;
-const DEPTH_Y_OFFSET = 90;
+/* Front Card (Distance 0 - Center/Active) */
+const FRONT_SCALE = 1.4;                   // Size multiplier
+const FRONT_DEPTH = RADIUS_DESKTOP;        // Z-axis position
+const FRONT_Y_OFFSET = 90;                 // Vertical lift
+const FRONT_BRIGHTNESS = 1.5;              // Brightness level
+const FRONT_BLUR = 0;                      // Blur amount (px)
 
-/* Lighting - Desktop 3D */
-const BRIGHTNESS_FRONT = 1.5;
-const BRIGHTNESS_BACK = 0.5;
-const BLUR_MAX = 7;
-const SATURATION_MIN = 0.6;
+/* Side Cards (Distance 1 - Immediate neighbors) */
+const SIDE_SCALE = 1.1;                    // Size multiplier
+const SIDE_DEPTH = 200;                    // Z-axis position (closer = larger number)
+const SIDE_HORIZONTAL_OFFSET = 380;        // Left/Right spread
+const SIDE_Y_OFFSET = 70;                  // Vertical lift
+const SIDE_ROTATION_ANGLE = 5;             // Y-axis rotation (degrees)
+const SIDE_BRIGHTNESS = 1.3;               // Brightness level
+const SIDE_BLUR = 2;                       // Blur amount (px)
 
-/* Curvature settings - Desktop 3D */
-const MAX_CURVE_ANGLE = 35;
+/* Back Cards (Distance 2 - Second neighbors) */
+const BACK_SCALE = 0.8;                    // Size multiplier
+const BACK_DEPTH = 170;                    // Z-axis position
+const BACK_HORIZONTAL_OFFSET = 450;        // Left/Right spread
+const BACK_Y_OFFSET = 40;                  // Vertical lift
+const BACK_ROTATION_ANGLE = 55;            // Y-axis rotation (degrees)
+const BACK_BRIGHTNESS = 0.6;              // Brightness level
+const BACK_BLUR = 5;                       // Blur amount (px)
 
-/* Mobile 2D Swipe */
-const SWIPE_THRESHOLD = 50;
-const MOBILE_CARD_GAP = 20;
+/* 3D Visual Effects */
+const MAX_CURVE_ANGLE = 35;                // Image curvature intensity
+const SATURATION_MIN = 0.6;                // Minimum color saturation
+
+/* ==================== DESKTOP 2D LINEAR LAYOUT (<5 events) ==================== */
+
+/* Card Scaling */
+const LINEAR_FRONT_SCALE = 1.4;            // Center/active card size
+const LINEAR_SIDE_SCALE = 1.05;             // Side cards size
+
+/* Card Positioning */
+const LINEAR_CARD_GAP = -5;               // Horizontal spacing (negative = overlap)
+const LINEAR_SIDE_Y_OFFSET = 40;           // Vertical offset for side cards (down)
+
+/* Card Visual Effects */
+const LINEAR_SIDE_OPACITY = 0.9;           // Side card transparency (0-1)
+const LINEAR_SIDE_BRIGHTNESS = 0.6;        // Side card brightness (0-2)
+const LINEAR_SIDE_BLUR = 1.5;              // Side card blur in pixels
+const LINEAR_SIDE_SATURATION = 0.85;       // Side card color saturation (0-1)
+
+/* Overlay Darkness */
+const LINEAR_FRONT_OVERLAY = "from-black/95 via-black/40 to-transparent";  // Active card
+const LINEAR_SIDE_OVERLAY = "from-black via-black/5 to-black/5";      // Side cards
+
+/* ==================== MOBILE 2D SWIPE CAROUSEL ==================== */
+const SWIPE_THRESHOLD = 50;                // Pixels needed to trigger swipe
+const MOBILE_CARD_GAP = 20;                // Spacing between cards
 
 /* ================= UTILS ================= */
 
@@ -289,23 +324,23 @@ const Carousal: React.FC<CarousalProps> = ({
                     )}
 
                     {/* CONTENT */}
-                    <div className="absolute bottom-0 p-5 text-white w-full">
+                    <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                       <h3 className="text-xl font-bold mb-2 line-clamp-2">
                         {event.title}
                       </h3>
 
                       <div className="space-y-1.5 text-xs text-gray-300">
                         <div className="flex items-center gap-2">
-                          <Calendar size={12} /> 
+                          <Calendar size={12} className="flex-shrink-0" /> 
                           <span className="truncate">{event.date}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <MapPin size={12} /> 
+                          <MapPin size={12} className="flex-shrink-0" /> 
                           <span className="truncate">{event.location}</span>
                         </div>
                         {event.duration && (
                           <div className="flex items-center gap-2">
-                            <Clock size={12} /> 
+                            <Clock size={12} className="flex-shrink-0" /> 
                             <span className="truncate">{event.duration}</span>
                           </div>
                         )}
@@ -403,8 +438,215 @@ const Carousal: React.FC<CarousalProps> = ({
     );
   }
 
-  /* ================= RENDER DESKTOP 3D ================= */
+  /* ================= RENDER DESKTOP ================= */
 
+  // Use 2D linear layout for less than 5 events on desktop
+  const useLinearLayout = total < 5;
+
+  if (useLinearLayout) {
+    // LINEAR 2D LAYOUT - ENHANCED WITH FULL VISUAL CONTROLS
+    return (
+      <section
+        className="relative h-[900px] flex items-center justify-center overflow-hidden"
+      >
+        {/* AMBIENT LIGHTING - MATCH 3D */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 50%, ${COLORS.light} 0%, transparent 60%)`,
+            filter: 'blur(80px)',
+            opacity: 0.4
+          }}
+        />
+
+        {/* CARD CONTAINER */}
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div 
+            className="relative flex items-center justify-center"
+            style={{
+              width: CARD_WIDTH * LINEAR_FRONT_SCALE,
+              height: CARD_HEIGHT * LINEAR_FRONT_SCALE,
+            }}
+          >
+            {events.map((event, i) => {
+              const offset = i - currentIndex;
+              const isActive = i === currentIndex;
+              const isAdjacent = Math.abs(offset) === 1;
+              const isVisible = Math.abs(offset) <= 1;
+
+              if (!isVisible) return null;
+
+              const baseTranslateX = offset * (CARD_WIDTH * LINEAR_FRONT_SCALE + LINEAR_CARD_GAP);
+              const scale = isActive ? LINEAR_FRONT_SCALE : LINEAR_SIDE_SCALE;
+              const opacity = isActive ? 1 : LINEAR_SIDE_OPACITY;
+              const zIndex = isActive ? 20 : isAdjacent ? 10 : 0;
+
+              return (
+                <div
+                  key={event.id}
+                  className="mt-3 absolute left-1/2"
+                  style={{
+                    top: isActive ? 0 : `${LINEAR_SIDE_Y_OFFSET}px`,
+                    transform: `
+                      translateX(calc(-50% + ${baseTranslateX}px))
+                      scale(${scale})
+                    `,
+                    opacity: opacity,
+                    zIndex: zIndex,
+                    transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
+                    pointerEvents: isActive ? 'auto' : 'none',
+                  }}
+                  onClick={() => isActive && onSelect(event)}
+                >
+                  {/* CARD WITH ENHANCED VISUAL EFFECTS */}
+                  <div
+                    className="relative rounded-3xl overflow-hidden border border-white/10 cursor-pointer"
+                    style={{
+                      width: CARD_WIDTH,
+                      height: CARD_HEIGHT,
+                      filter: isActive 
+                        ? 'brightness(1) blur(0px) saturate(1)' 
+                        : `brightness(${LINEAR_SIDE_BRIGHTNESS}) blur(${LINEAR_SIDE_BLUR}px) saturate(${LINEAR_SIDE_SATURATION})`,
+                      boxShadow: isActive
+                        ? `0 0 180px ${COLORS.glow}AA, 0 30px 80px rgba(0,0,0,0.7)`
+                        : `0 15px 40px rgba(0,0,0,0.55)`,
+                    }}
+                  >
+                    {/* IMAGE */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${event.poster})`,
+                      }}
+                    />
+
+                    {/* OVERLAY - NOW USES DIFFERENT DARKNESS FOR SIDE CARDS */}
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-t ${
+                        isActive ? LINEAR_FRONT_OVERLAY : LINEAR_SIDE_OVERLAY
+                      }`}
+                    />
+
+                    {/* BADGE */}
+                    {isActive && event.badge && (
+                      <div className="absolute top-5 right-5 z-10">
+                        <span
+                          className={`px-4 py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
+                        >
+                          {event.badge}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* CONTENT */}
+                    <div className="absolute bottom-0 left-0 right-0 p-7 text-white">
+                      <h3 className="text-2xl font-bold mb-3 line-clamp-2 pr-2">
+                        {event.title}
+                      </h3>
+
+                      <div className="space-y-2 text-sm text-gray-300">
+                        <div className="flex items-center gap-2 pr-2">
+                          <Calendar size={14} className="flex-shrink-0" /> 
+                          <span className="truncate">{event.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2 pr-2">
+                          <MapPin size={14} className="flex-shrink-0" /> 
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                        {event.duration && (
+                          <div className="flex items-center gap-2 pr-2">
+                            <Clock size={14} className="flex-shrink-0" /> 
+                            <span className="truncate">{event.duration}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isActive && (
+                        <button
+                          className={`mt-5 w-full py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl hover:shadow-2xl transition-shadow`}
+                        >
+                          View Full Details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CONTROLS - EXACT POSITION AS 3D */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+          <div className="relative">
+            {/* Glass panel background */}
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
+            
+            {/* Inner glow */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+            
+            {/* Control buttons */}
+            <div className="relative flex items-center gap-8 px-10 py-6">
+              {/* Left arrow */}
+              <button
+                onClick={() => setIndex(wrap(currentIndex - 1))}
+                className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+              >
+                <ChevronLeft 
+                  size={24} 
+                  className="group-hover:-translate-x-1 transition-transform"
+                />
+              </button>
+
+              {/* Dots indicator */}
+              <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                {events.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setIndex(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      i === currentIndex
+                        ? `w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
+                        : "w-2 bg-gray-500 hover:bg-gray-400"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Right arrow */}
+              <button
+                onClick={() => setIndex(wrap(currentIndex + 1))}
+                className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+              >
+                <ChevronRight 
+                  size={24} 
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </button>
+            </div>
+
+            {/* Event counter */}
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
+              <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
+                Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+              </div>
+            </div>
+
+            {/* Decorative glow */}
+            <div 
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 blur-xl rounded-full -z-20"
+              style={{
+                background: COLORS.glow,
+                opacity: 0.3
+              }}
+            />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ================= 3D CIRCULAR CAROUSEL - WITH SEPARATE CONTROLS ================= */
   return (
     <section
       className="relative h-[900px] flex items-center justify-center overflow-hidden"
@@ -442,27 +684,56 @@ const Carousal: React.FC<CarousalProps> = ({
         {events.map((event, i) => {
           const angle = i * angleStep;
           const relative = ((angle - currentIndex * angleStep + 540) % 360) - 180;
-          const abs = Math.abs(relative);
+          const absAngle = Math.abs(relative);
           
-          if (abs > VISIBLE_ARC) return null;
+          // VISIBLE_ARC USAGE: Hide cards beyond this angle
+          if (absAngle > VISIBLE_ARC) return null;
 
-          /* Earth-like depth */
-          const depth = Math.cos((abs * Math.PI) / 180);
-          const z = RADIUS_DESKTOP * depth;
-          const y = depth * DEPTH_Y_OFFSET;
+          // Calculate circular distance (wrapping around the circle)
+          const rawDistance = Math.abs(i - currentIndex);
+          const circularDistance = Math.min(rawDistance, total - rawDistance);
+          
+          // Show only 5 cards: distances 0, 1, and 2
+          if (circularDistance > 2) return null;
 
-          /* Visual dominance */
-          const t = clamp((VISIBLE_ARC - abs) / VISIBLE_ARC, 0, 1);
-          const scale = SIDE_SCALE_DESKTOP + t * (FRONT_SCALE_DESKTOP - SIDE_SCALE_DESKTOP);
-          const brightness = BRIGHTNESS_BACK + t * (BRIGHTNESS_FRONT - BRIGHTNESS_BACK);
-          const blur = (1 - t) * BLUR_MAX;
-          const saturation = SATURATION_MIN + t * (1 - SATURATION_MIN);
+          const direction = relative > 0 ? 1 : -1;
 
-          /* Curvature */
-          const curveIntensity = (1 - t) * MAX_CURVE_ANGLE;
-          const curveDirection = relative > 0 ? 1 : -1;
+          // SEPARATE CONTROLS FOR EACH TIER
+          let tierScale, tierDepth, tierXOffset, tierYOffset, tierRotation, tierBrightness, tierBlur;
+
+          if (circularDistance === 0) {
+            // ========== FRONT CARD ==========
+            tierScale = FRONT_SCALE;
+            tierDepth = FRONT_DEPTH;
+            tierXOffset = 0;
+            tierYOffset = -FRONT_Y_OFFSET;
+            tierRotation = 0;
+            tierBrightness = FRONT_BRIGHTNESS;
+            tierBlur = FRONT_BLUR;
+          } else if (circularDistance === 1) {
+            // ========== SIDE CARDS (Distance 1) ==========
+            tierScale = SIDE_SCALE;
+            tierDepth = SIDE_DEPTH;
+            tierXOffset = SIDE_HORIZONTAL_OFFSET * direction;
+            tierYOffset = -SIDE_Y_OFFSET;
+            tierRotation = SIDE_ROTATION_ANGLE * direction;
+            tierBrightness = SIDE_BRIGHTNESS;
+            tierBlur = SIDE_BLUR;
+          } else {
+            // ========== BACK CARDS (Distance 2) ==========
+            tierScale = BACK_SCALE;
+            tierDepth = BACK_DEPTH;
+            tierXOffset = BACK_HORIZONTAL_OFFSET * direction;
+            tierYOffset = -BACK_Y_OFFSET;
+            tierRotation = BACK_ROTATION_ANGLE * direction;
+            tierBrightness = BACK_BRIGHTNESS;
+            tierBlur = BACK_BLUR;
+          }
 
           const isActive = i === currentIndex;
+
+          // Curvature
+          const curveIntensity = (1 - (circularDistance / 2)) * MAX_CURVE_ANGLE;
 
           return (
             <div
@@ -471,8 +742,10 @@ const Carousal: React.FC<CarousalProps> = ({
               style={{
                 transform: `
                   rotateY(${angle}deg)
-                  translateZ(${z}px)
-                  translateY(${-y}px)
+                  translateZ(${tierDepth}px)
+                  translateX(${tierXOffset}px)
+                  translateY(${tierYOffset}px)
+                  rotateY(${tierRotation}deg)
                 `,
                 transformStyle: "preserve-3d",
               }}
@@ -484,15 +757,17 @@ const Carousal: React.FC<CarousalProps> = ({
                 style={{
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
-                  transform: `scale(${scale})`,
+                  transform: `scale(${tierScale})`,
                   filter: `
-                    brightness(${brightness})
-                    blur(${blur}px)
-                    saturate(${saturation})
+                    brightness(${tierBrightness})
+                    blur(${tierBlur}px)
+                    saturate(${SATURATION_MIN + (1 - circularDistance * 0.2)})
                   `,
                   boxShadow: isActive
                     ? `0 0 180px ${COLORS.glow}AA, 0 30px 80px rgba(0,0,0,0.7)`
-                    : `0 15px 40px rgba(0,0,0,0.55)`,
+                    : circularDistance === 1
+                    ? `0 0 60px ${COLORS.glow}66, 0 15px 40px rgba(0,0,0,0.55)`
+                    : `0 5px 20px rgba(0,0,0,0.4)`,
                   transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
                 }}
               >
@@ -501,7 +776,7 @@ const Carousal: React.FC<CarousalProps> = ({
                   className="absolute inset-0 bg-cover bg-center"
                   style={{
                     backgroundImage: `url(${event.poster})`,
-                    transform: `rotateY(${curveIntensity * curveDirection * 0.1}deg)`,
+                    transform: `rotateY(${curveIntensity * direction * 0.1}deg)`,
                   }}
                 />
 
@@ -528,35 +803,35 @@ const Carousal: React.FC<CarousalProps> = ({
                   </div>
                 )}
 
-                {/* CONTENT */}
-                <div className="absolute bottom-0 p-7 text-white">
-                  <h3 className="text-2xl font-bold mb-3 line-clamp-2">
+                {/* CONTENT - FIXED OVERFLOW */}
+                <div className="absolute bottom-0 left-0 right-0 p-7 text-white">
+                  <h3 className="text-2xl font-bold mb-3 line-clamp-2 pr-2">
                     {event.title}
                   </h3>
 
                   <div className="space-y-2 text-sm text-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} /> 
+                    <div className="flex items-center gap-2 pr-2">
+                      <Calendar size={14} className="flex-shrink-0" /> 
                       <span className="truncate">{event.date}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} /> 
+                    <div className="flex items-center gap-2 pr-2">
+                      <MapPin size={14} className="flex-shrink-0" /> 
                       <span className="truncate">{event.location}</span>
                     </div>
                     {event.duration && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} /> 
+                      <div className="flex items-center gap-2 pr-2">
+                        <Clock size={14} className="flex-shrink-0" /> 
                         <span className="truncate">{event.duration}</span>
                       </div>
                     )}
                   </div>
 
                   {isActive && (
-                    <div
-                      className={`mt-5 py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl cursor-pointer hover:shadow-2xl transition-shadow`}
+                    <button
+                      className={`mt-5 w-full py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl hover:shadow-2xl transition-shadow`}
                     >
                       View Full Details
-                    </div>
+                    </button>
                   )}
                 </div>
               </div>
@@ -566,7 +841,7 @@ const Carousal: React.FC<CarousalProps> = ({
       </div>
 
       {/* CONTROLS AT BOTTOM */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
         <div className="relative">
           {/* Glass panel background */}
           <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
