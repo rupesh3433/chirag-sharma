@@ -494,9 +494,9 @@ const Carousal: React.FC<CarousalProps> = ({
                     opacity: opacity,
                     zIndex: zIndex,
                     transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
-                    pointerEvents: isActive ? 'auto' : 'none',
+                    pointerEvents: 'auto',
                   }}
-                  onClick={() => isActive && onSelect(event)}
+                  onClick={() => isActive ? onSelect(event) : setIndex(i)}
                 >
                   {/* CARD WITH ENHANCED VISUAL EFFECTS */}
                   <div
@@ -577,7 +577,7 @@ const Carousal: React.FC<CarousalProps> = ({
         </div>
 
         {/* CONTROLS - EXACT POSITION AS 3D */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30">
           <div className="relative">
             {/* Glass panel background */}
             <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
@@ -679,6 +679,7 @@ const Carousal: React.FC<CarousalProps> = ({
           transformStyle: "preserve-3d",
           transform: `rotateY(${-currentIndex * angleStep}deg)`,
           transition: `transform ${ROTATION_DURATION} ${ROTATION_EASING}`,
+          pointerEvents: 'none',
         }}
       >
         {events.map((event, i) => {
@@ -748,6 +749,7 @@ const Carousal: React.FC<CarousalProps> = ({
                   rotateY(${tierRotation}deg)
                 `,
                 transformStyle: "preserve-3d",
+                pointerEvents: 'auto',
               }}
               onClick={() => isActive ? onSelect(event) : setIndex(i)}
             >
@@ -841,7 +843,7 @@ const Carousal: React.FC<CarousalProps> = ({
       </div>
 
       {/* CONTROLS AT BOTTOM */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40">
         <div className="relative">
           {/* Glass panel background */}
           <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />

@@ -464,18 +464,6 @@ const Events: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* ================= QUICK ACTIONS (Mobile Floating) ================= */}
-        {!isLoading && !isError && events.length > 0 && (
-          <div className="sm:hidden fixed bottom-24 right-4 z-20 flex flex-col gap-3">
-            <button className="p-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg active:scale-95 transition-transform">
-              <Share2 size={20} />
-            </button>
-            <button className="p-3 rounded-full bg-gray-900/80 backdrop-blur-sm border border-white/10 text-white shadow-lg active:scale-95 transition-transform">
-              <Heart size={20} />
-            </button>
-          </div>
-        )}
       </main>
 
       {/* ================= EVENT MODAL ================= */}
