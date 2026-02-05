@@ -6,6 +6,7 @@ import { CheckCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
 
 import InstagramVideos from "../components/portfolio/InstagramVideos";
 import YoutubeVideos from "../components/portfolio/YoutubeVideos";
+import EventsSection from "../components/indexComponents/Events";
 
 /* -------------------- DATA -------------------- */
 
@@ -17,7 +18,7 @@ const servicesData = [
       "Luxury bridal makeup services by Celebrity Makeup Artist Chirag Sharma, crafted with premium products and a flawless, long-lasting finish.",
     image: "/photos/chirag1.jpeg",
     features: [
-      "Chirag’s Signature Bridal Makeup",
+      "Chirag's Signature Bridal Makeup",
       "Luxury Bridal Makeup (HD / Brush)",
       "Reception / Engagement / Cocktail Makeup",
       "Fully customized luxury finish",
@@ -61,49 +62,6 @@ const servicesData = [
       "Luxury high-end products only",
       "Hairstyling included",
     ],
-  },
-];
-
-
-const eventDummyImages = [
-  "/photos/chirag1.jpeg",
-  "/photos/chirag2.jpeg",
-  "/photos/chirag3.jpeg",
-  "/photos/chirag4.jpeg",
-];
-
-const portfolioItems = [
-  {
-    id: 1,
-    title: "Bridal Elegance",
-    category: "Bridal Makeup",
-    image:
-      "https://images.unsplash.com/photo-1594489573233-c2d4e4e5f106?auto=format&fit=crop&q=80&w=2000",
-    description: "Crafting timeless bridal looks with a touch of magic",
-  },
-  {
-    id: 2,
-    title: "Editorial Dream",
-    category: "Editorial Makeup",
-    image:
-      "https://images.unsplash.com/photo-1542145748-72b2eb8576cd?auto=format&fit=crop&q=80&w=2000",
-    description: "Bold, creative looks for photoshoots and fashion events",
-  },
-  {
-    id: 3,
-    title: "Glamorous Evening",
-    category: "Party Makeup",
-    image:
-      "https://images.unsplash.com/photo-1588731247530-4076fc99173e?auto=format&fit=crop&q=80&w=2000",
-    description: "Stunning looks that last throughout your special night",
-  },
-  {
-    id: 4,
-    title: "Intricate Henna",
-    category: "Henna Art",
-    image:
-      "https://images.unsplash.com/photo-1583266999030-4fba155cca8e?auto=format&fit=crop&q=80&w=2000",
-    description: "Beautiful designs that tell your unique story",
   },
 ];
 
@@ -155,12 +113,10 @@ const testimonials = [
 const Index = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const [testimonialIndex, setTestimonialIndex] = useState(0);
 
   const sectionRef = useRef<HTMLDivElement>(null);
-  const eventsRef = useRef<HTMLElement>(null);
   const portfolioRef = useRef<HTMLElement>(null);
 
   /* Scroll tracking */
@@ -174,22 +130,6 @@ const Index = () => {
             document.documentElement.scrollHeight - window.innerHeight;
           setScrollProgress((window.scrollY / total) * 100);
           setScrollY(window.scrollY);
-
-          // EVENTS scroll animation (FIXED)
-          if (eventsRef.current) {
-            const rect = eventsRef.current.getBoundingClientRect();
-
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-              const items =
-                eventsRef.current.querySelectorAll(".portfolio-item");
-
-              items.forEach((item) => {
-                const element = item as HTMLElement;
-                element.style.opacity = "1";
-                element.classList.add("animate-fade-in");
-              });
-            }
-          }
 
           // Services scroll animation
           if (sectionRef.current) {
@@ -266,7 +206,6 @@ const Index = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  {/* HERO BUTTON FIXED */}
                   <a
                     href="/Catalogue.pdf"
                     download
@@ -388,137 +327,25 @@ const Index = () => {
                 </div>
               ))}
             </div>
-            {/* 👇 ADD HERE */}
-<div className="mt-20 text-center">
-  <Link
-    to="/services"
-    className="inline-block px-10 py-4 rounded-full font-semibold
-    bg-gradient-to-r from-chirag-pink to-chirag-peach
-    text-black shadow-lg hover:shadow-xl hover:scale-101
-    transition-all duration-300"
-  >
-    Explore All Services
-  </Link>
-</div>
-          </div>
-
-          
-        </section>
-
-        {/* ================= EVENTS ================= */}
-        <section
-          ref={eventsRef}
-          className="relative py-24 overflow-hidden bg-gradient-to-b from-white via-white to-chirag-pink/10"
-        >
-          {/* Decorative blobs */}
-          <div
-            className="absolute -top-48 -right-48 w-[32rem] h-[32rem] rounded-full bg-gradient-to-br from-chirag-purple/20 to-chirag-pink/20 blur-3xl opacity-60"
-            style={{ transform: `translateY(${scrollY * 0.15}px)` }}
-          />
-          <div
-            className="absolute -bottom-48 -left-48 w-[32rem] h-[32rem] rounded-full bg-gradient-to-tr from-chirag-peach/20 to-chirag-pink/20 blur-3xl opacity-60"
-            style={{ transform: `translateY(${scrollY * -0.1}px)` }}
-          />
-
-          <div className="container-custom relative z-10">
-            {/* Header */}
-            <div className="text-center mb-20">
-              <div className="inline-block relative mb-6">
-                <div className="absolute inset-0 -m-6 bg-gradient-to-r from-chirag-pink/30 to-chirag-peach/30 blur-2xl rounded-full" />
-                <h2 className="relative text-4xl md:text-5xl font-bold font-playfair">
-                  Upcoming <span className="header-gradient">Events</span>
-                </h2>
-              </div>
-
-              <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-                Discover our upcoming bridal looks, fashion shoots, celebrity
-                makeovers, and premium henna showcases.
-              </p>
-            </div>
-
-            {/* Event Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-              {portfolioItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="group relative"
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseLeave={() => setActiveIndex(null)}
-                >
-                  <div
-                    className={`relative h-[420px] rounded-2xl overflow-hidden
-              shadow-lg transition-all duration-500
-              ${
-                activeIndex === index
-                  ? "shadow-2xl -translate-y-2"
-                  : "shadow-md"
-              }`}
-                  >
-                    {/* Image */}
-                    <img
-                      src={eventDummyImages[index % eventDummyImages.length]}
-                      alt={item.title}
-                      className="absolute inset-0 w-full h-full object-cover
-              transition-transform duration-700 group-hover:scale-110"
-                    />
-
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-90" />
-
-                    {/* Content */}
-                    <div
-                      className="absolute inset-0 flex flex-col justify-end p-6
-              transition-all duration-500"
-                    >
-                      <span className="text-chirag-pink text-xs uppercase tracking-widest mb-2">
-                        {item.category}
-                      </span>
-
-                      <h3 className="text-white text-xl font-semibold font-playfair leading-snug">
-                        {item.title}
-                      </h3>
-
-                      <p className="text-white/80 text-sm mt-2 line-clamp-3">
-                        {item.description}
-                      </p>
-
-                      {/* CTA */}
-                      <div
-                        className="mt-5 transform translate-y-6 opacity-0
-                group-hover:translate-y-0 group-hover:opacity-100
-                transition-all duration-500"
-                      >
-                        <Link
-                          to="/events"
-                          className="inline-flex items-center gap-2 px-5 py-2
-                  rounded-full bg-white/20 backdrop-blur-md text-white text-sm
-                  hover:bg-white/30 transition-colors"
-                        >
-                          View Details →
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom CTA */}
-            <div className="text-center">
+            
+            <div className="mt-20 text-center">
               <Link
-                to="/events"
+                to="/services"
                 className="inline-block px-10 py-4 rounded-full font-semibold
-        bg-gradient-to-r from-chirag-pink to-chirag-peach
-        text-black shadow-lg hover:shadow-xl hover:scale-101
-        transition-all duration-300"
+                bg-gradient-to-r from-chirag-pink to-chirag-peach
+                text-black shadow-lg hover:shadow-xl hover:scale-101
+                transition-all duration-300"
               >
-                Explore All Events
+                Explore All Services
               </Link>
             </div>
           </div>
         </section>
 
-        {/* ================= VIDEO SECTION (NEW) ================= */}
+        {/* ================= EVENTS ================= */}
+        <EventsSection scrollY={scrollY} />
+
+        {/* ================= VIDEO SECTION ================= */}
         <section ref={portfolioRef} className="py-20 bg-white">
           <div className="container-custom space-y-24">
             {/* Instagram FIRST */}
@@ -526,14 +353,12 @@ const Index = () => {
 
             {/* YouTube BELOW */}
             <YoutubeVideos limit={12} />
-
-
           </div>
           <div className="py-10 text-center">
-              <Link to="/portfolio" className="button-primary">
-                Explore Full Portfolio
-              </Link>
-            </div>
+            <Link to="/portfolio" className="button-primary">
+              Explore Full Portfolio
+            </Link>
+          </div>
         </section>
 
         {/* ================= TESTIMONIALS ================= */}

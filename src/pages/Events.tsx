@@ -27,7 +27,7 @@ import {
 /* ================= CONFIGURATION ================= */
 
 // CONTROL: Adjust this to change what's considered "current"
-const CURRENT_EVENTS_PERIOD_DAYS = 10;
+const CURRENT_EVENTS_PERIOD_DAYS = 60;
 
 /* ================= TYPES ================= */
 
@@ -63,7 +63,7 @@ type SectionType = "current" | "upcoming" | "past";
 
 /* ================= API INTEGRATION ================= */
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Fetch events from backend (public endpoint - no auth required)
 const fetchEvents = async (): Promise<Event[]> => {
