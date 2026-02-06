@@ -6,6 +6,7 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  Play,
 } from "lucide-react";
 
 /* =======================
@@ -37,6 +38,8 @@ type TikTokVideosProps = {
   heading?: string;
 };
 
+type EmbedStatus = 'loading' | 'success' | 'failed';
+
 /* =======================
    COMPONENT
 ======================= */
@@ -53,9 +56,11 @@ const TikTokVideos = ({
   const [cacheInfo, setCacheInfo] = useState<{ age_days?: number; cached_at?: string } | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
+  const [embedStatus, setEmbedStatus] = useState<Map<string, EmbedStatus>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const embedTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   /* =======================
      LOAD TIKTOK EMBED SCRIPT (CRITICAL)
@@ -196,12 +201,46 @@ const TikTokVideos = ({
   useEffect(() => {
     if (!videos.length) return;
 
+    // Initialize all videos as loading
+    const newStatus = new Map<string, EmbedStatus>();
+    videos.forEach(video => {
+      newStatus.set(video.video_id, 'loading');
+    });
+    setEmbedStatus(newStatus);
+
     // Let DOM paint first, then tell TikTok to process new embeds
     const timer = setTimeout(() => {
       (window as any).tiktokEmbed?.load();
+      
+      // After 3 seconds, check which embeds failed and mark them
+      const checkTimer = setTimeout(() => {
+        const statusUpdate = new Map(newStatus);
+        videos.forEach(video => {
+          const embedElement = document.querySelector(
+            `blockquote[data-video-id="${video.video_id}"]`
+          );
+          
+          // Check if TikTok actually rendered the iframe
+          const hasIframe = embedElement?.querySelector('iframe');
+          
+          if (hasIframe) {
+            statusUpdate.set(video.video_id, 'success');
+          } else {
+            statusUpdate.set(video.video_id, 'failed');
+          }
+        });
+        setEmbedStatus(statusUpdate);
+      }, 3000);
+      
+      embedTimeouts.current.set('check', checkTimer);
     }, 0);
 
-    return () => clearTimeout(timer);
+    embedTimeouts.current.set('init', timer);
+
+    return () => {
+      embedTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      embedTimeouts.current.clear();
+    };
   }, [videos]);
 
   /* =======================
@@ -219,6 +258,13 @@ const TikTokVideos = ({
       scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       setCurrentIndex(Math.min(videos.length - 3, currentIndex + 1));
     }
+  };
+
+  /* =======================
+     OPEN TIKTOK
+  ======================= */
+  const openTikTok = (videoId: string) => {
+    window.open(`https://www.tiktok.com/@${username}/video/${videoId}`, '_blank', 'noopener,noreferrer');
   };
 
   /* =======================
@@ -356,116 +402,186 @@ const TikTokVideos = ({
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            {videos.map((video) => (
-              <div
-                key={video.video_id}
-                className="snap-start w-[360px] flex-shrink-0"
-              >
-                <div className="rounded-xl border shadow bg-white">
-                  {/* ✅ OFFICIAL TIKTOK EMBED (blockquote method - NO overflow-hidden) */}
-                  <blockquote
-                    className="tiktok-embed w-[360px]"
-                    cite={`https://www.tiktok.com/@${username}/video/${video.video_id}`}
-                    data-video-id={video.video_id}
-                  >
-                    <section>
-                      {/* TikTok embed.js will replace this */}
-                      <a 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        href={`https://www.tiktok.com/@${username}/video/${video.video_id}`}
-                      >
-                        @{username}
-                      </a>
-                    </section>
-                  </blockquote>
+            {videos.map((video) => {
+              const status = embedStatus.get(video.video_id) || 'loading';
+              const showFallback = status === 'failed';
+              
+              return (
+                <div
+                  key={video.video_id}
+                  className="snap-start w-[360px] flex-shrink-0"
+                >
+                  <div className="rounded-xl border shadow bg-white overflow-hidden">
+                    {/* VIDEO CONTAINER */}
+                    <div className="relative bg-black" style={{ aspectRatio: '9/16' }}>
+                      {/* ✅ OFFICIAL TIKTOK EMBED (always render, hide if failed) */}
+                      <div className={showFallback ? 'hidden' : 'block'}>
+                        <blockquote
+                          className="tiktok-embed w-[360px]"
+                          cite={`https://www.tiktok.com/@${username}/video/${video.video_id}`}
+                          data-video-id={video.video_id}
+                        >
+                          <section>
+                            <a 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              href={`https://www.tiktok.com/@${username}/video/${video.video_id}`}
+                            >
+                              @{username}
+                            </a>
+                          </section>
+                        </blockquote>
+                      </div>
 
-                  {/* Video Info Card Below */}
-                  <div className="p-4 bg-white">
-                    {/* User Info */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {user?.profile_picture_url ? (
-                        <img 
-                          src={user.profile_picture_url} 
-                          alt={user.username}
-                          className="w-8 h-8 rounded-full border-2 border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-pink-500 flex items-center justify-center">
-                          <span className="text-xs font-bold text-white">
-                            {username.slice(0, 2).toUpperCase()}
-                          </span>
+                      {/* 🎯 FALLBACK: Thumbnail + Play Button (if embed fails) */}
+                      {showFallback && video.thumbnail_url && (
+                        <div 
+                          className="absolute inset-0 cursor-pointer group"
+                          onClick={() => openTikTok(video.video_id)}
+                        >
+                          {/* Thumbnail */}
+                          <img
+                            src={video.thumbnail_url}
+                            alt={video.description || 'TikTok Video'}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                          {/* Play Button */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                              <Play size={36} className="text-gray-900 ml-1" fill="currentColor" />
+                            </div>
+                          </div>
+
+                          {/* Top Bar */}
+                          <div className="absolute top-0 left-0 right-0 p-4 flex items-center gap-2">
+                            {user?.profile_picture_url ? (
+                              <img 
+                                src={user.profile_picture_url} 
+                                alt={user.username}
+                                className="w-8 h-8 rounded-full border-2 border-white"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-pink-500 flex items-center justify-center border-2 border-white">
+                                <span className="text-xs font-bold text-white">
+                                  {username.slice(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            <span className="text-white text-sm font-semibold drop-shadow-lg">
+                              @{username}
+                            </span>
+                          </div>
+
+                          {/* Bottom Info */}
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg mb-1">
+                              {video.description || 'TikTok Video'}
+                            </p>
+                            <p className="text-white/90 text-xs drop-shadow">
+                              {formatDate(video.create_time)} • {formatDuration(video.duration)}
+                            </p>
+                          </div>
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          @{username}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(video.create_time)} • {formatDuration(video.duration)}
-                        </p>
-                      </div>
+
+                      {/* Loading State */}
+                      {status === 'loading' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                          <div className="w-12 h-12 border-4 border-gray-300 border-t-cyan-500 rounded-full animate-spin"></div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Description */}
-                    <p className="text-sm text-gray-700 mb-3 line-clamp-2">
-                      {video.description || "TikTok Video"}
-                    </p>
-
-                    {/* Music Info */}
-                    {video.music_title && (
-                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
-                        <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                        </svg>
-                        <p className="truncate">
-                          {video.music_title} {video.music_author && `- ${video.music_author}`}
-                        </p>
+                    {/* Video Info Card Below */}
+                    <div className="p-4 bg-white">
+                      {/* User Info */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {user?.profile_picture_url ? (
+                          <img 
+                            src={user.profile_picture_url} 
+                            alt={user.username}
+                            className="w-8 h-8 rounded-full border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">
+                              {username.slice(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            @{username}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(video.create_time)} • {formatDuration(video.duration)}
+                          </p>
+                        </div>
                       </div>
-                    )}
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
-                      {video.like_count !== undefined && video.like_count > 0 && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Heart size={16} />
-                          <span className="text-xs font-semibold">
-                            {formatNumber(video.like_count)}
-                          </span>
+                      {/* Description */}
+                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">
+                        {video.description || "TikTok Video"}
+                      </p>
+
+                      {/* Music Info */}
+                      {video.music_title && (
+                        <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
+                          <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                          </svg>
+                          <p className="truncate">
+                            {video.music_title} {video.music_author && `- ${video.music_author}`}
+                          </p>
                         </div>
                       )}
 
-                      {video.comment_count !== undefined && video.comment_count > 0 && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <MessageCircle size={16} />
-                          <span className="text-xs font-semibold">
-                            {formatNumber(video.comment_count)}
-                          </span>
-                        </div>
-                      )}
+                      {/* Stats */}
+                      <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
+                        {video.like_count !== undefined && video.like_count > 0 && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Heart size={16} />
+                            <span className="text-xs font-semibold">
+                              {formatNumber(video.like_count)}
+                            </span>
+                          </div>
+                        )}
 
-                      {video.share_count !== undefined && video.share_count > 0 && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Share2 size={16} />
-                          <span className="text-xs font-semibold">
-                            {formatNumber(video.share_count)}
-                          </span>
-                        </div>
-                      )}
+                        {video.comment_count !== undefined && video.comment_count > 0 && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <MessageCircle size={16} />
+                            <span className="text-xs font-semibold">
+                              {formatNumber(video.comment_count)}
+                            </span>
+                          </div>
+                        )}
 
-                      <a
-                        href={`https://www.tiktok.com/@${username}/video/${video.video_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-auto text-gray-600 hover:text-cyan-500 transition"
-                      >
-                        <Bookmark size={16} />
-                      </a>
+                        {video.share_count !== undefined && video.share_count > 0 && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Share2 size={16} />
+                            <span className="text-xs font-semibold">
+                              {formatNumber(video.share_count)}
+                            </span>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => openTikTok(video.video_id)}
+                          className="ml-auto text-gray-600 hover:text-cyan-500 transition"
+                        >
+                          <Bookmark size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
