@@ -12,7 +12,7 @@ export default function SocialMediaPage() {
       <section>
         <TikTokVideos 
           username="_chirag_101"
-          count={12}
+          limit={12}
           heading="Latest TikTok Videos"
         />
       </section>
