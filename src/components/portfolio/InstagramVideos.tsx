@@ -7,29 +7,56 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  Eye
+  Eye,
+  Play
 } from "lucide-react";
 
 /* =======================
-   TYPES
+   TYPES - MATCHING BACKEND EXACTLY
 ======================= */
-type InstagramPost = {
+type InstagramReel = {
   id: string;
   code: string;
   title: string;
   caption: string;
   thumbnail: string;
-  cloudinaryThumbnail?: string | null;
+  cloudinary?: {
+    url: string;
+    public_id: string;
+  } | null;
   postUrl: string;
   embedUrl: string;
-  likeCount?: number;
-  commentCount?: number;
-  playCount?: number;
-  shareCount?: number;
-  takenAt?: number;
+  likeCount: number;
+  commentCount: number;
+  playCount: number;
+  takenAt: number;
+  mediaType?: number;
+  productType?: string;
+};
+
+type InstagramApiResponse = {
+  success: boolean;
+  count: number;
+  reels: InstagramReel[];
+  source: "mongodb_cache" | "rapidapi_fresh" | "mongodb_cache_locked" | "mongodb_cache_fallback" | "none";
+  cached_at?: string;
+  cache_age_days?: number;
+  timestamp: string;
+  message?: string;
+  warning?: string;
+  error?: string;
+  cached_to_db?: boolean;
+  metrics?: {
+    cloudinary_uploads: number;
+    cloudinary_deletes: number;
+    failed_deletes: number;
+    queued_for_retry: number;
+    duration_seconds: number;
+  };
 };
 
 type InstagramVideosProps = {
+  username?: string;
   limit?: number;
   heading?: string;
 };
@@ -53,13 +80,15 @@ const PlayIcon = ({ size = 32, className = "" }: { size?: number; className?: st
    COMPONENT
 ======================= */
 const InstagramVideos = ({
+  username = "_jinniechiragmua",
   limit = 12,
   heading = "Latest Instagram Reels",
 }: InstagramVideosProps) => {
-  const [posts, setPosts] = useState<InstagramPost[]>([]);
+  const [reels, setReels] = useState<InstagramReel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<string>("");
+  const [cacheInfo, setCacheInfo] = useState<{ age_days?: number; cached_at?: string } | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -103,37 +132,34 @@ const InstagramVideos = ({
     setError(null);
 
     try {
-      console.log(`🚀 Fetching reels from: ${API_URL}/public/instagram/reels?limit=${limit}`);
+      console.log(`🚀 Fetching reels from: ${API_URL}/public/instagram/reels?username=${username}&limit=${limit}`);
       
-      const response = await fetch(`${API_URL}/public/instagram/reels?limit=${limit}`);
-      const data = await response.json();
+      const response = await fetch(`${API_URL}/public/instagram/reels?username=${username}&limit=${limit}`);
+      const data: InstagramApiResponse = await response.json();
 
-      console.log("📦 Response:", data);
+      console.log("📦 Instagram API Response:", data);
 
       if (data.success && data.reels && data.reels.length > 0) {
-        const processedReels = data.reels.map((reel: any) => ({
-          id: reel.id || `reel_${reel.code}`,
-          code: reel.code,
-          title: reel.title || reel.caption || "Instagram Reel",
-          caption: reel.caption || "",
-          thumbnail: reel.cloudinaryThumbnail || reel.thumbnail,
-          cloudinaryThumbnail: reel.cloudinaryThumbnail,
-          embedUrl: reel.embedUrl,
-          postUrl: reel.postUrl?.replace(/\/$/, '') || `https://www.instagram.com/reel/${reel.code}`,
-          likeCount: reel.likeCount || 0,
-          commentCount: reel.commentCount || 0,
-          playCount: reel.playCount || 0,
-          shareCount: reel.shareCount || 0,
-          takenAt: reel.takenAt || 0
-        }));
+        setReels(data.reels);
+        setDataSource(data.source);
         
-        setPosts(processedReels);
-        setDataSource(data.source || "unknown");
+        // Store cache info
+        if (data.cache_age_days !== undefined && data.cached_at) {
+          setCacheInfo({
+            age_days: data.cache_age_days,
+            cached_at: data.cached_at
+          });
+        }
         
-        // Only show banner if freshly fetched from API
+        // Show banner for fresh API data
         if (data.source === "rapidapi_fresh") {
           console.log("✅ Fresh data from RapidAPI - showing banner");
           setShowBanner(true);
+          
+          // Log metrics if available
+          if (data.metrics) {
+            console.log("📊 Refresh Metrics:", data.metrics);
+          }
           
           // Hide banner after 3 seconds
           setTimeout(() => {
@@ -143,28 +169,32 @@ const InstagramVideos = ({
           setShowBanner(false);
         }
         
-        // Log source info
+        // Log source-specific info
         if (data.source === "mongodb_cache") {
           console.log(`✅ Loaded from MongoDB cache (age: ${data.cache_age_days} days)`);
+        } else if (data.source === "mongodb_cache_locked") {
+          console.log(`🔒 Using cache while refresh in progress (age: ${data.cache_age_days} days)`);
         } else if (data.source === "mongodb_cache_fallback") {
-          console.warn(`⚠️ Using old cache (age: ${data.cache_age_days} days) - API failed`);
-          setError(`Using cached data (${data.cache_age_days} days old)`);
+          console.warn(`⚠️ API failed, using old cache (age: ${data.cache_age_days} days)`);
+          if (data.warning) {
+            setError(data.warning);
+          }
         }
       } else if (data.success === false) {
         // API returned error
-        console.error("❌ API returned error:", data.error);
+        console.error("❌ Instagram API returned error:", data.error);
         setError(data.error || "Failed to fetch reels");
-        setPosts([]);
+        setReels([]);
       } else {
         // Empty response
-        console.warn("⚠️ API returned no reels");
+        console.warn("⚠️ Instagram API returned no reels");
         setError("No reels available");
-        setPosts([]);
+        setReels([]);
       }
     } catch (err) {
-      console.error("Failed to fetch reels:", err);
+      console.error("❌ Failed to fetch Instagram reels:", err);
       setError("Failed to connect to server");
-      setPosts([]);
+      setReels([]);
     } finally {
       setLoading(false);
     }
@@ -172,7 +202,7 @@ const InstagramVideos = ({
 
   useEffect(() => {
     fetchReels();
-  }, [limit]);
+  }, [username, limit]);
 
   /* =======================
      SCROLL HANDLERS
@@ -188,7 +218,7 @@ const InstagramVideos = ({
       setCurrentIndex(Math.max(0, currentIndex - 1));
     } else {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      setCurrentIndex(Math.min(posts.length - 3, currentIndex + 1));
+      setCurrentIndex(Math.min(reels.length - 3, currentIndex + 1));
     }
   };
 
@@ -209,7 +239,7 @@ const InstagramVideos = ({
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading reels...</p>
+              <p className="text-gray-600">Loading Instagram reels...</p>
             </div>
           </div>
         </div>
@@ -217,7 +247,7 @@ const InstagramVideos = ({
     );
   }
 
-  if (posts.length === 0) {
+  if (reels.length === 0) {
     return (
       <section className="py-12 bg-white">
         <div className="max-w-[1280px] mx-auto px-4">
@@ -225,11 +255,11 @@ const InstagramVideos = ({
             <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Reels Available</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Reels Available in Instagram</h3>
             <p className="text-gray-600 mb-4">{error || "Unable to load Instagram reels at this time"}</p>
             <button 
               onClick={fetchReels}
-              className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition"
+              className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition font-semibold"
             >
               Retry
             </button>
@@ -242,19 +272,37 @@ const InstagramVideos = ({
   return (
     <section className="py-12 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-[1280px] mx-auto px-4">
-        {/* Fresh Data Banner - Only shows for fresh API data and disappears after 3s */}
+        {/* Fresh Data Banner - Only shows for fresh API data */}
         {showBanner && dataSource === "rapidapi_fresh" && (
           <div className="mb-6 border rounded-lg p-4 flex items-center gap-3 bg-blue-50 border-blue-200 text-blue-700 animate-fade-in">
             <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
-            <p className="text-sm font-medium">🆕 Fresh from API</p>
+            <p className="text-sm font-medium">🆕 Fresh from Instagram API</p>
+          </div>
+        )}
+
+        {/* Cache Info Banner - For locked/fallback states */}
+        {(dataSource === "mongodb_cache_locked" || dataSource === "mongodb_cache_fallback") && cacheInfo && (
+          <div className="mb-6 border rounded-lg p-4 flex items-center gap-3 bg-amber-50 border-amber-200 text-amber-700">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm font-medium">
+              {dataSource === "mongodb_cache_locked" 
+                ? `🔄 Refresh in progress - showing cached data (${cacheInfo.age_days} days old)`
+                : `⚠️ Using cached data (${cacheInfo.age_days} days old) - API temporarily unavailable`
+              }
+            </p>
           </div>
         )}
 
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-gray-900">{heading}</h2>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">{heading}</h2>
+            <p className="text-gray-600 mt-1">@{username}</p>
+          </div>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-3">
@@ -268,7 +316,7 @@ const InstagramVideos = ({
             </button>
             <button
               onClick={() => scroll('right')}
-              disabled={currentIndex >= posts.length - 3}
+              disabled={currentIndex >= reels.length - 3}
               className="p-2 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
               aria-label="Next"
             >
@@ -277,7 +325,7 @@ const InstagramVideos = ({
             
             {/* View on Instagram Button */}
             <a
-              href="https://www.instagram.com/_jinniechiragmua/"
+              href={`https://www.instagram.com/${username}/`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white rounded-full hover:shadow-lg transition font-semibold text-sm"
@@ -301,33 +349,34 @@ const InstagramVideos = ({
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            {posts.map((post) => {
-              const thumbnailUrl = post.cloudinaryThumbnail || post.thumbnail;
+            {reels.map((reel) => {
+              // Use Cloudinary URL if available, otherwise original thumbnail
+              const thumbnailUrl = reel.cloudinary?.url || reel.thumbnail;
               
               return (
                 <div
-                  key={post.id}
+                  key={reel.id}
                   className="flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-start"
-                  onMouseEnter={() => setHoveredId(post.id)}
+                  onMouseEnter={() => setHoveredId(reel.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
                   {/* Instagram-like Card */}
                   <div 
                     className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100"
-                    onClick={() => openInstagram(post.postUrl)}
+                    onClick={() => openInstagram(reel.postUrl)}
                   >
                     {/* Video Container */}
                     <div className="relative aspect-[9/16] bg-black overflow-hidden group">
                       {/* Thumbnail */}
                       <img
                         src={thumbnailUrl}
-                        alt={post.title}
+                        alt={reel.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                         onError={(e) => {
                           // Fallback to original thumbnail if Cloudinary fails
-                          if (e.currentTarget.src !== post.thumbnail) {
-                            e.currentTarget.src = post.thumbnail;
+                          if (e.currentTarget.src !== reel.thumbnail) {
+                            e.currentTarget.src = reel.thumbnail;
                           }
                         }}
                       />
@@ -340,8 +389,8 @@ const InstagramVideos = ({
                         <div 
                           className="transition-all duration-300"
                           style={{
-                            transform: hoveredId === post.id ? 'scale(1.2)' : 'scale(1)',
-                            opacity: hoveredId === post.id ? 1 : 0.9
+                            transform: hoveredId === reel.id ? 'scale(1.2)' : 'scale(1)',
+                            opacity: hoveredId === reel.id ? 1 : 0.9
                           }}
                         >
                           <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl"
@@ -360,7 +409,7 @@ const InstagramVideos = ({
                             </div>
                           </div>
                           <span className="text-white text-sm font-semibold" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                            _jinniechiragmua
+                            {username}
                           </span>
                         </div>
                         <MoreHorizontal className="text-white" size={20} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
@@ -378,62 +427,55 @@ const InstagramVideos = ({
                                  WebkitBoxOrient: 'vertical',
                                  textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                }}>
-                              {post.caption || post.title}
+                              {reel.caption || reel.title}
                             </p>
                             <p className="text-white/80 text-xs" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                              {formatDate(post.takenAt || 0)}
+                              {formatDate(reel.takenAt)}
                             </p>
                           </div>
 
                           {/* Right Side - Action Buttons */}
                           <div className="flex flex-col gap-4">
                             {/* Like */}
-                            <div className="flex flex-col items-center">
-                              <button className="text-white hover:scale-110 transition-transform">
-                                <Heart size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                              </button>
-                              {post.likeCount && post.likeCount > 0 && (
+                            {reel.likeCount > 0 && (
+                              <div className="flex flex-col items-center">
+                                <button className="text-white hover:scale-110 transition-transform">
+                                  <Heart size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                </button>
                                 <span className="text-white text-xs font-semibold mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                                  {formatNumber(post.likeCount)}
+                                  {formatNumber(reel.likeCount)}
                                 </span>
-                              )}
-                            </div>
+                              </div>
+                            )}
 
                             {/* Comment */}
-                            {post.commentCount && post.commentCount > 0 && (
+                            {reel.commentCount > 0 && (
                               <div className="flex flex-col items-center">
                                 <button className="text-white hover:scale-110 transition-transform">
                                   <MessageCircle size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
                                 </button>
                                 <span className="text-white text-xs font-semibold mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                                  {formatNumber(post.commentCount)}
+                                  {formatNumber(reel.commentCount)}
                                 </span>
                               </div>
                             )}
 
                             {/* Views */}
-                            {post.playCount && post.playCount > 0 && (
+                            {reel.playCount > 0 && (
                               <div className="flex flex-col items-center">
                                 <button className="text-white hover:scale-110 transition-transform">
                                   <Eye size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
                                 </button>
                                 <span className="text-white text-xs font-semibold mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                                  {formatNumber(post.playCount)}
+                                  {formatNumber(reel.playCount)}
                                 </span>
                               </div>
                             )}
 
-                            {/* Share */}
-                            {post.shareCount && post.shareCount > 0 && (
-                              <div className="flex flex-col items-center">
-                                <button className="text-white hover:scale-110 transition-transform">
-                                  <Send size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                </button>
-                                <span className="text-white text-xs font-semibold mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                                  {formatNumber(post.shareCount)}
-                                </span>
-                              </div>
-                            )}
+                            {/* Send */}
+                            <button className="text-white hover:scale-110 transition-transform">
+                              <Send size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                            </button>
 
                             {/* Bookmark */}
                             <button className="text-white hover:scale-110 transition-transform">
@@ -452,7 +494,7 @@ const InstagramVideos = ({
 
         {/* Mobile Scroll Indicator */}
         <div className="md:hidden flex justify-center gap-1 mt-6">
-          {posts.slice(0, Math.min(posts.length, 5)).map((_, idx) => (
+          {reels.slice(0, Math.min(reels.length, 5)).map((_, idx) => (
             <div
               key={idx}
               className={`h-1 rounded-full transition-all ${
@@ -465,7 +507,7 @@ const InstagramVideos = ({
         {/* Mobile View Profile Link */}
         <div className="md:hidden text-center mt-8">
           <a
-            href="https://www.instagram.com/_jinniechiragmua/"
+            href={`https://www.instagram.com/${username}/`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white font-semibold rounded-full hover:shadow-lg transition-all"
@@ -477,6 +519,28 @@ const InstagramVideos = ({
           </a>
         </div>
       </div>
+
+      {/* CSS for animations */}
+      <style>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          display: none;
+        }
+        
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </section>
   );
 };

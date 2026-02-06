@@ -3,10 +3,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
 import { CheckCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
-
-import InstagramVideos from "../components/portfolio/InstagramVideos";
-import YoutubeVideos from "../components/portfolio/YoutubeVideos";
 import EventsSection from "../components/indexComponents/Events";
+import SocialMediaPage from "@/components/portfolio/SocialMedia";
 
 /* -------------------- DATA -------------------- */
 
@@ -323,7 +321,7 @@ const Index = () => {
                 </div>
               ))}
             </div>
-            
+
             <div className="mt-20 text-center">
               <Link
                 to="/services"
@@ -344,16 +342,8 @@ const Index = () => {
         {/* ================= VIDEO SECTION ================= */}
         <section ref={portfolioRef} className="py-20 bg-white">
           <div className="container-custom space-y-24">
-            {/* Instagram Reels */}
-            <InstagramVideos
-              limit={12}
-              heading="Latest Instagram Reels"
-            />
-
-            {/* YouTube Videos */}
-            <YoutubeVideos limit={12} />
+            <SocialMediaPage/>
           </div>
-          
           <div className="py-10 text-center">
             <Link to="/portfolio" className="button-primary">
               Explore Full Portfolio
