@@ -198,7 +198,7 @@ const Portfolio = () => {
 
         <div className="space-y-32 mb-16">
           {/* Instagram */}
-          <InstagramVideos limit={6} />
+          <InstagramVideos limit={12} />
           <YoutubeVideos limit={12} />
         </div>
       </section>

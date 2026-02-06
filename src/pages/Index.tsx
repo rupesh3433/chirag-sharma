@@ -113,7 +113,6 @@ const testimonials = [
 const Index = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const [testimonialIndex, setTestimonialIndex] = useState(0);
 
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -151,9 +150,6 @@ const Index = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const handlePlayVideo = (id: number) => setActiveVideo(id);
-  const handleCloseVideo = () => setActiveVideo(null);
 
   const nextTestimonial = () =>
     setTestimonialIndex((i) => (i === testimonials.length - 1 ? 0 : i + 1));
@@ -348,12 +344,16 @@ const Index = () => {
         {/* ================= VIDEO SECTION ================= */}
         <section ref={portfolioRef} className="py-20 bg-white">
           <div className="container-custom space-y-24">
-            {/* Instagram FIRST */}
-            <InstagramVideos limit={6} />
+            {/* Instagram Reels */}
+            <InstagramVideos
+              limit={12}
+              heading="Latest Instagram Reels"
+            />
 
-            {/* YouTube BELOW */}
+            {/* YouTube Videos */}
             <YoutubeVideos limit={12} />
           </div>
+          
           <div className="py-10 text-center">
             <Link to="/portfolio" className="button-primary">
               Explore Full Portfolio
