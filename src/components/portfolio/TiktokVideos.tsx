@@ -191,19 +191,30 @@ const TikTokVideos = ({
   }, [username, limit]);
 
   /* =======================
-     LOAD TIKTOK EMBEDS
+     LOAD TIKTOK EMBEDS - USE FALLBACK ALWAYS
   ======================= */
   useEffect(() => {
     if (!videos.length) return;
 
-    // Initialize all as loading
+    console.log("📹 Using custom video player (TikTok embed disabled due to network restrictions)");
+    
+    // Mark all as failed immediately to use custom player
+    const failedStatus = new Map<string, EmbedStatus>();
+    videos.forEach(video => {
+      failedStatus.set(video.video_id, 'failed');
+    });
+    setEmbedStatus(failedStatus);
+
+    /* 
+    // TikTok embed code disabled due to connection issues
+    // Keeping for reference if you want to enable it later
+    
     const newStatus = new Map<string, EmbedStatus>();
     videos.forEach(video => {
       newStatus.set(video.video_id, 'loading');
     });
     setEmbedStatus(newStatus);
 
-    // Load TikTok embed script if not already loaded
     if (!document.getElementById("tiktok-embed-script")) {
       const script = document.createElement("script");
       script.id = "tiktok-embed-script";
@@ -212,16 +223,11 @@ const TikTokVideos = ({
       
       script.onload = () => {
         console.log("✅ TikTok embed.js loaded");
-        // TikTok's embed.js automatically processes blockquotes when it loads
-        // Just wait a bit then check status
-        setTimeout(() => {
-          checkEmbedStatus();
-        }, 2000);
+        setTimeout(() => checkEmbedStatus(), 2000);
       };
       
       script.onerror = () => {
         console.warn("❌ TikTok embed.js failed to load");
-        // If script fails to load, mark all as failed immediately
         const failedStatus = new Map<string, EmbedStatus>();
         videos.forEach(video => {
           failedStatus.set(video.video_id, 'failed');
@@ -231,50 +237,32 @@ const TikTokVideos = ({
       
       document.body.appendChild(script);
     } else {
-      console.log("ℹ️ TikTok embed.js already loaded");
-      // Script already exists, embeds should auto-process
-      // But we can manually trigger by removing and re-adding the script
-      setTimeout(() => {
-        checkEmbedStatus();
-      }, 1000);
+      setTimeout(() => checkEmbedStatus(), 1000);
     }
 
     function checkEmbedStatus() {
-      // Clear any existing timeout
       if (embedCheckTimeoutRef.current) {
         clearTimeout(embedCheckTimeoutRef.current);
       }
 
-      // Check after 4 seconds if embeds loaded
       embedCheckTimeoutRef.current = setTimeout(() => {
-        console.log("⏰ Checking embed status...");
         const statusUpdate = new Map(newStatus);
-        let successCount = 0;
-        let failCount = 0;
-        
         videos.forEach(video => {
           const embedElement = document.querySelector(
             `blockquote[data-video-id="${video.video_id}"]`
           );
-          
-          // Check if TikTok actually rendered the iframe
           const hasIframe = embedElement?.querySelector('iframe');
           
           if (hasIframe) {
-            console.log(`✅ Embed success: ${video.video_id}`);
             statusUpdate.set(video.video_id, 'success');
-            successCount++;
           } else {
-            console.log(`❌ Embed failed: ${video.video_id}`);
             statusUpdate.set(video.video_id, 'failed');
-            failCount++;
           }
         });
-        
-        console.log(`📊 Embed results: ${successCount} success, ${failCount} failed`);
         setEmbedStatus(statusUpdate);
       }, 4000);
     }
+    */
 
     return () => {
       if (embedCheckTimeoutRef.current) {
@@ -544,13 +532,23 @@ const TikTokVideos = ({
                                 }
                               }}
                               src={video.video_url}
+                              poster={thumbnailUrl}
                               className={`w-full h-full object-cover ${isPlaying ? 'block' : 'hidden'}`}
                               playsInline
                               loop
                               controls={isPlaying}
+                              preload="metadata"
+                              crossOrigin="anonymous"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleVideoPlayback(video.video_id);
+                              }}
+                              onError={(e) => {
+                                console.warn(`❌ Video load error for ${video.video_id}:`, e);
+                                // Pause and reset on error
+                                const videoEl = e.currentTarget;
+                                videoEl.pause();
+                                setPlayingVideo(null);
                               }}
                             />
                           )}
@@ -559,7 +557,16 @@ const TikTokVideos = ({
                           {!isPlaying && (
                             <div 
                               className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
-                              onClick={() => toggleVideoPlayback(video.video_id)}
+                              onClick={() => {
+                                // Try to play video, if it fails open TikTok
+                                const videoElement = videoRefs.current.get(video.video_id);
+                                if (videoElement && video.video_url) {
+                                  toggleVideoPlayback(video.video_id);
+                                } else {
+                                  // No video URL or element, open TikTok directly
+                                  openTikTok(video.video_id);
+                                }
+                              }}
                             >
                               <div 
                                 className="transition-all duration-300"
@@ -572,6 +579,15 @@ const TikTokVideos = ({
                                   <PlayIcon size={28} className="text-white drop-shadow-lg ml-1" />
                                 </div>
                               </div>
+                              
+                              {/* Click to view on TikTok hint */}
+                              {!video.video_url && (
+                                <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                  <span className="text-xs text-white/80 bg-black/50 px-3 py-1 rounded-full drop-shadow-lg">
+                                    Click to view on TikTok
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                           
