@@ -72,7 +72,7 @@ const safeVideoForPlayback = (video: any): TikTokVideo => {
 };
 
 /* =======================
-   TIKTOK EMBED PLAYER COMPONENT (OFFICIAL & STABLE)
+   TIKTOK EMBED PLAYER COMPONENT (FIXED VERSION)
 ======================= */
 interface TikTokEmbedPlayerProps {
   videoId: string;  // ✅ ONLY USE THIS
@@ -97,9 +97,18 @@ const TikTokEmbedPlayer = React.forwardRef<HTMLIFrameElement, TikTokEmbedPlayerP
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [playerReady, setPlayerReady] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const commandQueueRef = useRef<Array<{type: string, value?: any}>>([]);
 
     // Combine refs
     React.useImperativeHandle(ref, () => iframeRef.current!);
+
+    // 🎯 LOG: Component mount/unmount
+    useEffect(() => {
+      console.log(`🧱 IFRAME COMPONENT MOUNTED for video: ${videoId}`);
+      return () => {
+        console.log(`💀 IFRAME COMPONENT UNMOUNTED for video: ${videoId}`);
+      };
+    }, [videoId]);
 
     // 🎯 STEP 1: Build Embed Player URL (CORRECT FORMAT)
     const iframeUrl = useMemo(() => {
@@ -128,34 +137,71 @@ const TikTokEmbedPlayer = React.forwardRef<HTMLIFrameElement, TikTokEmbedPlayerP
         params.append(key, value ? '1' : '0');
       });
       
-      return `${baseUrl}?${params.toString()}`;
+      const url = `${baseUrl}?${params.toString()}`;
+      console.log(`🔗 IFRAME URL BUILT for ${videoId}:`, url);
+      return url;
     }, [videoId]);
+
+    // 🎯 LOG: Render state before any conditional rendering
+    useEffect(() => {
+      console.log(`🧠 RENDER STATE for ${videoId}:`, {
+        isVisible,
+        playerReady,
+        isPlaying,
+        isMuted,
+        willRenderIframe: isVisible // ✅ NOW ONLY DEPENDS ON isVisible
+      });
+    }, [videoId, isVisible, playerReady, isPlaying, isMuted]);
 
     // 🎯 STEP 2: Wait for onPlayerReady (MANDATORY)
     useEffect(() => {
       const handler = (e: MessageEvent) => {
+        // Log ALL message events for debugging
+        console.log(`📩 RAW MESSAGE EVENT:`, {
+          origin: e.origin,
+          data: e.data,
+          videoId
+        });
+
         // Check if this is a TikTok player message
         if (!e.data || typeof e.data !== 'object' || !e.data['x-tiktok-player']) {
           return;
         }
 
+        console.log(`🎵 TIKTOK PLAYER MESSAGE for ${videoId}:`, e.data);
+
         const { type } = e.data;
         
         if (type === 'onPlayerReady') {
-          console.log(`🎬 TikTok Player Ready: ${videoId}`);
+          console.log(`✅ 🎬 PLAYER READY: ${videoId}`);
           setPlayerReady(true);
           if (onPlayerReady) onPlayerReady();
+
+          // Process queued commands
+          if (commandQueueRef.current.length > 0) {
+            console.log(`📦 PROCESSING ${commandQueueRef.current.length} QUEUED COMMANDS for ${videoId}`);
+            commandQueueRef.current.forEach(cmd => {
+              try {
+                const message = { 'x-tiktok-player': true, ...cmd };
+                iframeRef.current?.contentWindow?.postMessage(message, '*');
+                console.log(`📤 SENT QUEUED COMMAND to ${videoId}:`, cmd.type);
+              } catch (err) {
+                console.error(`❌ FAILED QUEUED COMMAND for ${videoId}:`, err);
+              }
+            });
+            commandQueueRef.current = [];
+          }
         }
         
-        // Optional: Listen for other player events
+        // Log other player events
         if (type === 'onPlay') {
-          console.log(`▶️ TikTok Video Playing: ${videoId}`);
+          console.log(`▶️ TIKTOK VIDEO PLAYING: ${videoId}`);
         }
         if (type === 'onPause') {
-          console.log(`⏸️ TikTok Video Paused: ${videoId}`);
+          console.log(`⏸️ TIKTOK VIDEO PAUSED: ${videoId}`);
         }
         if (type === 'onEnd') {
-          console.log(`🏁 TikTok Video Ended: ${videoId}`);
+          console.log(`🏁 TIKTOK VIDEO ENDED: ${videoId}`);
         }
       };
 
@@ -163,60 +209,68 @@ const TikTokEmbedPlayer = React.forwardRef<HTMLIFrameElement, TikTokEmbedPlayerP
       return () => window.removeEventListener('message', handler);
     }, [videoId, onPlayerReady]);
 
-    // 🎯 STEP 3: Control play/pause correctly
-    useEffect(() => {
-      if (!playerReady || !iframeRef.current || !isVisible) return;
+    // Helper function to send postMessage (with queueing if not ready)
+    const sendPlayerCommand = useCallback((type: string, value?: any) => {
+      if (!iframeRef.current || !isVisible) {
+        console.log(`⚠️ SKIP COMMAND for ${videoId} (not visible):`, type);
+        return;
+      }
+
+      if (!playerReady) {
+        console.log(`⏳ QUEUE COMMAND for ${videoId} (player not ready):`, type);
+        commandQueueRef.current.push({ type, value });
+        return;
+      }
 
       try {
         const message = {
           'x-tiktok-player': true,
-          type: isPlaying ? 'play' : 'pause',
-          value: undefined
+          type,
+          value
         };
         
         iframeRef.current.contentWindow?.postMessage(message, '*');
+        console.log(`✅ SENT COMMAND to ${videoId}:`, type);
       } catch (err) {
-        console.error('Failed to control TikTok playback:', err);
+        console.error(`❌ FAILED TO SEND COMMAND to ${videoId}:`, type, err);
       }
-    }, [isPlaying, playerReady, isVisible]);
+    }, [playerReady, isVisible, videoId]);
+
+    // 🎯 STEP 3: Control play/pause correctly
+    useEffect(() => {
+      if (!isVisible) {
+        console.log(`⏹️ VIDEO NOT VISIBLE, skipping playback control for ${videoId}`);
+        return;
+      }
+
+      const command = isPlaying ? 'play' : 'pause';
+      console.log(`🎮 PLAYBACK CONTROL for ${videoId}: ${command} (playerReady: ${playerReady})`);
+      sendPlayerCommand(command);
+    }, [isPlaying, isVisible, sendPlayerCommand, videoId, playerReady]);
 
     // 🎯 STEP 4: Control mute/unmute
     useEffect(() => {
-      if (!playerReady || !iframeRef.current || !isVisible) return;
-
-      try {
-        const message = {
-          'x-tiktok-player': true,
-          type: isMuted ? 'mute' : 'unMute',
-          value: undefined
-        };
-        
-        iframeRef.current.contentWindow?.postMessage(message, '*');
-      } catch (err) {
-        console.error('Failed to control TikTok mute:', err);
+      if (!isVisible) {
+        console.log(`🔇 VIDEO NOT VISIBLE, skipping mute control for ${videoId}`);
+        return;
       }
-    }, [isMuted, playerReady, isVisible]);
+
+      const command = isMuted ? 'mute' : 'unMute';
+      console.log(`🔊 MUTE CONTROL for ${videoId}: ${command} (playerReady: ${playerReady})`);
+      sendPlayerCommand(command);
+    }, [isMuted, isVisible, sendPlayerCommand, videoId, playerReady]);
 
     // 🎯 STEP 5: Initial mute for autoplay compliance
     useEffect(() => {
-      if (!playerReady || !iframeRef.current || !isVisible) return;
+      if (!playerReady || !isVisible) return;
 
-      // Always start muted to comply with browser autoplay policies
-      try {
-        const muteMessage = {
-          'x-tiktok-player': true,
-          type: 'mute',
-          value: undefined
-        };
-        
-        iframeRef.current.contentWindow?.postMessage(muteMessage, '*');
-      } catch (err) {
-        console.error('Failed to initial mute TikTok:', err);
-      }
-    }, [playerReady, isVisible]);
+      console.log(`🔇 INITIAL MUTE for ${videoId} (autoplay compliance)`);
+      sendPlayerCommand('mute');
+    }, [playerReady, isVisible, sendPlayerCommand, videoId]);
 
-    // Loading state (when not visible or player not ready)
-    if (!isVisible || !playerReady) {
+    // ✅ FIX: ALWAYS render iframe when visible, use playerReady ONLY for UI
+    if (!isVisible) {
+      console.log(`👁️ VIDEO ${videoId} NOT VISIBLE - showing placeholder`);
       return (
         <div 
           className="relative w-full h-full bg-black overflow-hidden"
@@ -239,48 +293,64 @@ const TikTokEmbedPlayer = React.forwardRef<HTMLIFrameElement, TikTokEmbedPlayerP
       );
     }
 
+    console.log(`✅ RENDERING IFRAME for ${videoId} (visible: ${isVisible}, playerReady: ${playerReady})`);
+
     return (
       <div 
         className="relative w-full h-full bg-black overflow-hidden"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* 🎯 STEP 6: TikTok Embed Player iframe (CRITICAL) */}
+        {/* 🎯 CRITICAL FIX: Always render iframe when visible (no playerReady check) */}
         <iframe
           ref={iframeRef}
           src={iframeUrl}
           className="absolute inset-0 w-full h-full border-none"
-          allow="autoplay; fullscreen"  // ✅ Essential permissions
+          allow="autoplay; fullscreen"  // ✅ Essential permissions (NO SANDBOX)
           referrerPolicy="strict-origin-when-cross-origin"
           loading="lazy"
           title={`TikTok video by @${username}`}
-          sandbox="allow-scripts allow-same-origin allow-presentation"
+          onLoad={() => {
+            console.log(`🎬 IFRAME ONLOAD EVENT for ${videoId}`);
+          }}
         />
         
-        {/* Custom overlay controls */}
-        <div className={`absolute inset-0 transition-opacity duration-300 ${
-          isHovered || !isPlaying ? 'opacity-100' : 'opacity-0'
-        }`}>
-          {/* Top gradient */}
-          <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black/70 to-transparent" />
-          
-          {/* Bottom gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-          
-          {/* Center play button (when not playing) */}
-          {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div 
-                className="transition-transform duration-300"
-                style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
-              >
-                <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-2xl border-2 border-white/50">
-                  <Play className="w-7 h-7 text-white ml-1" />
+        {/* Loading overlay (visual only, doesn't block iframe) */}
+        {!playerReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-white text-sm">Loading player...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Custom overlay controls (only when player is ready) */}
+        {playerReady && (
+          <div className={`absolute inset-0 transition-opacity duration-300 pointer-events-none ${
+            isHovered || !isPlaying ? 'opacity-100' : 'opacity-0'
+          }`}>
+            {/* Top gradient */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black/70 to-transparent" />
+            
+            {/* Bottom gradient */}
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            
+            {/* Center play button (when not playing) */}
+            {!isPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div 
+                  className="transition-transform duration-300"
+                  style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
+                >
+                  <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-2xl border-2 border-white/50">
+                    <Play className="w-7 h-7 text-white ml-1" />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -316,6 +386,8 @@ const TikTokVideos = ({
   useEffect(() => {
     if (!videos.length) return;
 
+    console.log(`👁️ SETTING UP INTERSECTION OBSERVER for ${videos.length} videos`);
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -323,8 +395,10 @@ const TikTokVideos = ({
           if (!videoId) return;
 
           if (entry.isIntersecting) {
+            console.log(`✅ VIDEO ${videoId} NOW VISIBLE (${Math.round(entry.intersectionRatio * 100)}% visible)`);
             setVisibleVideos(prev => new Set(prev).add(videoId));
           } else {
+            console.log(`❌ VIDEO ${videoId} NOW HIDDEN`);
             setVisibleVideos(prev => {
               const next = new Set(prev);
               next.delete(videoId);
@@ -333,6 +407,7 @@ const TikTokVideos = ({
             
             // Pause video when it's not visible
             if (playingVideo === videoId) {
+              console.log(`⏸️ AUTO-PAUSING ${videoId} (scrolled out of view)`);
               setPlayingVideo(null);
             }
           }
@@ -347,9 +422,13 @@ const TikTokVideos = ({
 
     // Observe all video containers
     const containers = document.querySelectorAll('[data-video-id]');
+    console.log(`👁️ OBSERVING ${containers.length} video containers`);
     containers.forEach(container => observer.observe(container));
 
-    return () => observer.disconnect();
+    return () => {
+      console.log(`👁️ DISCONNECTING INTERSECTION OBSERVER`);
+      observer.disconnect();
+    };
   }, [videos, playingVideo]);
 
   /* =======================
@@ -391,12 +470,23 @@ const TikTokVideos = ({
      FETCH PROFILE (SAFE VERSION)
   ======================= */
   const fetchProfile = async () => {
+    console.log(`🔄 FETCHING PROFILE: @${username} (limit: ${limit})`);
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/public/tiktok/profile?username=${username}&count=${limit}`);
+      const url = `${API_URL}/public/tiktok/profile?username=${username}&count=${limit}`;
+      console.log(`📡 API REQUEST:`, url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+
+      console.log(`📥 API RESPONSE:`, {
+        success: data.success,
+        source: data.source,
+        videoCount: data.videos?.length,
+        user: data.user?.username
+      });
 
       if (data.success && data.user && data.videos && data.videos.length > 0) {
         setUser(data.user);
@@ -416,31 +506,34 @@ const TikTokVideos = ({
           });
         }
         
-        console.log(`✅ Loaded ${validVideos.length} TikTok videos using ${data.source}`);
+        console.log(`✅ LOADED ${validVideos.length} TikTok videos using ${data.source}`);
+        console.log(`📋 VIDEO IDs:`, validVideos.map(v => v.video_id));
         
         // 🚨 SAFETY WARNING: Log if backend sends dangerous URLs
-        data.videos.forEach((video: any) => {
-          if (video.video_url || video.mp4_url) {
+        data.videos.forEach((video: any, index: number) => {
+          if (video.video_url || video.mp4_url || video.play_url) {
             console.warn(
-              `🚨 Backend sent video_url/mp4_url for ${video.video_id}. ` +
+              `🚨 Backend sent video_url/mp4_url/play_url for video #${index + 1} (${video.video_id}). ` +
               `Frontend is IGNORING these for playback (using Embed Player instead).`
             );
           }
         });
       } else if (data.success === false) {
+        console.error(`❌ API ERROR:`, data.error);
         setError(data.error || "Failed to fetch TikTok profile");
         setVideos([]);
         setUser(null);
       } else {
+        console.warn(`⚠️ NO VIDEOS AVAILABLE`);
         setError("No videos available");
         setVideos([]);
         setUser(null);
       }
     } catch (err) {
+      console.error(`❌ FETCH ERROR:`, err);
       setError("Failed to connect to server");
       setVideos([]);
       setUser(null);
-      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -454,15 +547,20 @@ const TikTokVideos = ({
      VIDEO CONTROLS
   ======================= */
   const toggleVideoPlayback = useCallback((videoId: string) => {
+    console.log(`🎮 TOGGLE PLAYBACK for ${videoId} (current: ${playingVideo})`);
+    
     if (playingVideo === videoId) {
+      console.log(`⏸️ PAUSING ${videoId}`);
       setPlayingVideo(null);
     } else {
       // Ensure only one video plays at a time
       if (playingVideo) {
+        console.log(`⏸️ PAUSING ${playingVideo} (switching to ${videoId})`);
         setPlayingVideo(null);
       }
       // Wait a frame to ensure previous video is paused
       requestAnimationFrame(() => {
+        console.log(`▶️ PLAYING ${videoId}`);
         setPlayingVideo(videoId);
       });
     }
@@ -472,8 +570,10 @@ const TikTokVideos = ({
     setMutedVideos(prev => {
       const next = new Set(prev);
       if (next.has(videoId)) {
+        console.log(`🔊 UNMUTING ${videoId}`);
         next.delete(videoId);
       } else {
+        console.log(`🔇 MUTING ${videoId}`);
         next.add(videoId);
       }
       return next;
@@ -481,6 +581,7 @@ const TikTokVideos = ({
   }, []);
 
   const handlePlayerReady = useCallback((videoId: string) => {
+    console.log(`✅ PLAYER READY CALLBACK for ${videoId}`);
     setPlayerReadyVideos(prev => new Set(prev).add(videoId));
   }, []);
 
@@ -496,6 +597,7 @@ const TikTokVideos = ({
       ? Math.max(0, currentIndex - 1)
       : Math.min(videos.length - 3, currentIndex + 1);
     
+    console.log(`📜 SCROLL ${direction} (new index: ${newIndex})`);
     setCurrentIndex(newIndex);
     
     if (direction === 'left') {
@@ -509,7 +611,9 @@ const TikTokVideos = ({
      OPEN TIKTOK
   ======================= */
   const openTikTok = useCallback((videoId: string) => {
-    window.open(`https://www.tiktok.com/@${username}/video/${videoId}`, '_blank', 'noopener,noreferrer');
+    const url = `https://www.tiktok.com/@${username}/video/${videoId}`;
+    console.log(`🔗 OPENING TIKTOK:`, url);
+    window.open(url, '_blank', 'noopener,noreferrer');
   }, [username]);
 
   /* =======================
@@ -644,6 +748,13 @@ const TikTokVideos = ({
               const isMuted = mutedVideos.has(video.video_id);
               const isPlayerReady = playerReadyVideos.has(video.video_id);
               
+              console.log(`🎨 RENDERING VIDEO CARD ${video.video_id}:`, {
+                isVisible,
+                isPlaying,
+                isMuted,
+                isPlayerReady
+              });
+              
               // Get or create ref for this video
               if (!videoRefs.current.has(video.video_id)) {
                 videoRefs.current.set(video.video_id, React.createRef());
@@ -672,13 +783,6 @@ const TikTokVideos = ({
                         isMuted={isMuted}
                         onPlayerReady={() => handlePlayerReady(video.video_id)}
                       />
-                      
-                      {/* Status Indicator */}
-                      {isVisible && !isPlayerReady && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        </div>
-                      )}
                       
                       {/* Quick Actions */}
                       <div className="absolute bottom-4 right-4 z-20 flex gap-2">
@@ -787,11 +891,6 @@ const TikTokVideos = ({
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-
-        /* 🎯 IMPORTANT: No pointer-events: none on iframe */
-        .tiktok-embed iframe {
-          pointer-events: auto !important;
         }
       `}</style>
     </section>
