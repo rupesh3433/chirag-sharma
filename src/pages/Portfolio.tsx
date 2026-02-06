@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 
 import InstagramVideos from "../components/portfolio/InstagramVideos";
 import YoutubeVideos from "../components/portfolio/YoutubeVideos";
+import SocialMediaPage from "@/components/portfolio/SocialMedia";
 
 /* =======================
    TYPES
@@ -197,9 +198,7 @@ const Portfolio = () => {
         </div>
 
         <div className="space-y-32 mb-16">
-          {/* Instagram */}
-          <InstagramVideos limit={12} />
-          <YoutubeVideos limit={12} />
+                      <SocialMediaPage/>
         </div>
       </section>
     )}
