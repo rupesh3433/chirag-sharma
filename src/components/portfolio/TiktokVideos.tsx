@@ -64,7 +64,7 @@ const PlayIcon = ({ size = 32, className = "" }: { size?: number; className?: st
 );
 
 /* =======================
-   TIKTOK EMBED PLAYER (WITH FULLSCREEN)
+   TIKTOK EMBED PLAYER
 ======================= */
 interface TikTokEmbedPlayerProps {
   videoId: string;
@@ -75,6 +75,7 @@ interface TikTokEmbedPlayerProps {
   commentCount?: number;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  onClose: () => void;
 }
 
 const TikTokEmbedPlayer: React.FC<TikTokEmbedPlayerProps> = ({ 
@@ -85,7 +86,8 @@ const TikTokEmbedPlayer: React.FC<TikTokEmbedPlayerProps> = ({
   likeCount,
   commentCount,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  onClose
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -173,12 +175,17 @@ const TikTokEmbedPlayer: React.FC<TikTokEmbedPlayerProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={onClose}
+                className="p-2 bg-black/50 backdrop-blur-sm rounded-full text-white hover:bg-black/70 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <button
                 onClick={onToggleFullscreen}
                 className="p-2 bg-black/50 backdrop-blur-sm rounded-full text-white hover:bg-black/70 transition-all"
               >
                 {isFullscreen ? <X className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
               </button>
-              <MoreHorizontal className="text-white drop-shadow-lg" size={20} />
             </div>
           </div>
 
@@ -357,27 +364,22 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
      NAVIGATION
   ======================= */
   const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < videos.length - 1;
+  const canGoNext = currentIndex < videos.length - 3;
 
-  const goToPrev = useCallback(() => {
-    if (canGoPrev) {
-      setCurrentIndex(prev => prev - 1);
-      if (scrollContainerRef.current) {
-        const cardWidth = scrollContainerRef.current.offsetWidth;
-        scrollContainerRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
-      }
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const scrollAmount = container.offsetWidth / 3;
+    
+    if (direction === 'left') {
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.max(0, currentIndex - 1));
+    } else {
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setCurrentIndex(Math.min(videos.length - 3, currentIndex + 1));
     }
-  }, [canGoPrev]);
-
-  const goToNext = useCallback(() => {
-    if (canGoNext) {
-      setCurrentIndex(prev => prev + 1);
-      if (scrollContainerRef.current) {
-        const cardWidth = scrollContainerRef.current.offsetWidth;
-        scrollContainerRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
-      }
-    }
-  }, [canGoNext]);
+  };
 
   /* =======================
      TOUCH/SWIPE HANDLERS
@@ -397,10 +399,10 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     const threshold = 50;
 
     if (Math.abs(distance) > threshold) {
-      if (distance > 0) {
-        goToNext();
-      } else {
-        goToPrev();
+      if (distance > 0 && canGoNext) {
+        scroll('right');
+      } else if (distance < 0 && canGoPrev) {
+        scroll('left');
       }
     }
 
@@ -409,22 +411,19 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   };
 
   /* =======================
-     KEYBOARD NAVIGATION
+     MOUSE/TRACKPAD SWIPE (2-finger)
   ======================= */
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        goToPrev();
-      } else if (e.key === 'ArrowRight') {
-        goToNext();
-      } else if (e.key === 'Escape' && isFullscreen) {
-        setIsFullscreen(false);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      e.preventDefault();
+      
+      if (e.deltaX > 20 && canGoNext) {
+        scroll('right');
+      } else if (e.deltaX < -20 && canGoPrev) {
+        scroll('left');
       }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrev, goToNext, isFullscreen]);
+    }
+  };
 
   /* =======================
      VIDEO CONTROLS
@@ -484,8 +483,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   /* =======================
      RENDER: MAIN CONTENT
   ======================= */
-  const currentVideo = videos[currentIndex];
-
   return (
     <section className="py-12 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-[1280px] mx-auto px-4">
@@ -526,28 +523,10 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
             )}
           </div>
           
-          {/* View Profile Link */}
-          <a
-            href={`https://www.tiktok.com/@${username}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-pink-500 text-white rounded-full hover:shadow-lg transition font-semibold text-sm"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
-            </svg>
-            <span>View Profile</span>
-          </a>
-        </div>
-
-        {/* Navigation Controls */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm text-gray-500 font-medium">
-            {currentIndex + 1} / {videos.length}
-          </div>
-          <div className="flex items-center gap-3">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-3">
             <button
-              onClick={goToPrev}
+              onClick={() => scroll('left')}
               disabled={!canGoPrev}
               className="p-2 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
               aria-label="Previous"
@@ -555,100 +534,166 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
               <ChevronLeft size={20} />
             </button>
             <button
-              onClick={goToNext}
+              onClick={() => scroll('right')}
               disabled={!canGoNext}
               className="p-2 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
               aria-label="Next"
             >
               <ChevronRight size={20} />
             </button>
+            
+            <a
+              href={`https://www.tiktok.com/@${username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-pink-500 text-white rounded-full hover:shadow-lg transition font-semibold text-sm"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+              </svg>
+              <span>View Profile</span>
+            </a>
           </div>
         </div>
 
-        {/* Video Container */}
-        <div 
-          ref={scrollContainerRef}
-          className="relative overflow-hidden"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="w-full max-w-md mx-auto">
-            <div
-              className="bg-white rounded-xl overflow-hidden shadow-xl border border-gray-100"
-              onMouseEnter={() => setHoveredId(currentVideo.video_id)}
-              onMouseLeave={() => setHoveredId(null)}
-            >
-              {/* Video Container */}
-              <div className="relative aspect-[9/16] bg-black overflow-hidden">
-                {activeVideoId === currentVideo.video_id ? (
-                  <TikTokEmbedPlayer
-                    videoId={currentVideo.video_id}
-                    username={username}
-                    thumbnailUrl={currentVideo.cloudinary?.url || currentVideo.thumbnail_url || ''}
-                    description={currentVideo.description}
-                    likeCount={currentVideo.like_count}
-                    commentCount={currentVideo.comment_count}
-                    isFullscreen={isFullscreen}
-                    onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-                  />
-                ) : (
-                  <div
-                    onClick={() => handleCardClick(currentVideo.video_id)}
-                    className="relative w-full h-full cursor-pointer group"
-                  >
-                    <img
-                      src={currentVideo.cloudinary?.url || currentVideo.thumbnail_url}
-                      alt={currentVideo.description}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        {/* Reels Container - Instagram Style Swiper */}
+        <div className="relative">
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
+          >
+            {videos.map((video) => {
+              const thumbnailUrl = video.cloudinary?.url || video.thumbnail_url || '';
+              const isActive = activeVideoId === video.video_id;
+              
+              return (
+                <div
+                  key={video.video_id}
+                  className="flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-start"
+                  onMouseEnter={() => setHoveredId(video.video_id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                >
+                  <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+                    {/* Video Container */}
+                    <div className="relative aspect-[9/16] bg-black overflow-hidden">
+                      {isActive ? (
+                        <TikTokEmbedPlayer
+                          videoId={video.video_id}
+                          username={username}
+                          thumbnailUrl={thumbnailUrl}
+                          description={video.description}
+                          likeCount={video.like_count}
+                          commentCount={video.comment_count}
+                          isFullscreen={isFullscreen}
+                          onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+                          onClose={() => setActiveVideoId(null)}
+                        />
+                      ) : (
+                        <div
+                          onClick={() => handleCardClick(video.video_id)}
+                          className="relative w-full h-full cursor-pointer group"
+                        >
+                          <img
+                            src={thumbnailUrl}
+                            alt={video.description}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-                    {/* Play Icon */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div 
-                        className="transition-all duration-300"
-                        style={{
-                          transform: hoveredId === currentVideo.video_id ? 'scale(1.2)' : 'scale(1)',
-                        }}
-                      >
-                        <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border-3 border-white/60">
-                          <PlayIcon size={36} className="text-white drop-shadow-lg" />
+                          {/* Play Icon */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div 
+                              className="transition-all duration-300"
+                              style={{
+                                transform: hoveredId === video.video_id ? 'scale(1.2)' : 'scale(1)',
+                              }}
+                            >
+                              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border-3 border-white/60">
+                                <PlayIcon size={36} className="text-white drop-shadow-lg" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Top Bar */}
+                          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-pink-500 to-purple-500 p-0.5">
+                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                                  <span className="text-xs font-bold text-gray-700">TK</span>
+                                </div>
+                              </div>
+                              <span className="text-white text-sm font-semibold drop-shadow-lg">
+                                {username}
+                              </span>
+                            </div>
+                            <MoreHorizontal className="text-white drop-shadow-lg" size={20} />
+                          </div>
+
+                          {/* Bottom Stats */}
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <div className="flex items-end justify-between">
+                              <div className="flex-1 mr-4">
+                                <p className="text-white text-sm font-medium mb-2 line-clamp-2 drop-shadow-lg">
+                                  {video.description || 'TikTok Video'}
+                                </p>
+                                <p className="text-white/80 text-xs drop-shadow-lg">
+                                  {formatDate(video.create_time)}
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col gap-4">
+                                {video.like_count && video.like_count > 0 && (
+                                  <div className="flex flex-col items-center">
+                                    <Heart size={28} className="text-white drop-shadow-lg" />
+                                    <span className="text-white text-xs font-semibold mt-1 drop-shadow-lg">
+                                      {formatNumber(video.like_count)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {video.comment_count && video.comment_count > 0 && (
+                                  <div className="flex flex-col items-center">
+                                    <MessageCircle size={28} className="text-white drop-shadow-lg" />
+                                    <span className="text-white text-xs font-semibold mt-1 drop-shadow-lg">
+                                      {formatNumber(video.comment_count)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                <Send size={28} className="text-white drop-shadow-lg" />
+                                <Bookmark size={28} className="text-white drop-shadow-lg" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* External Link */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTikTok(video.video_id);
+                            }}
+                            className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-md rounded-full text-gray-900 hover:bg-white transition-all shadow-lg"
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                          </button>
                         </div>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Info Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <p className="text-white text-sm font-medium mb-2 line-clamp-2 drop-shadow-lg">
-                        {currentVideo.description || 'TikTok Video'}
-                      </p>
-                      <p className="text-white/80 text-xs drop-shadow-lg">
-                        {formatDate(currentVideo.create_time)}
-                      </p>
-                    </div>
-
-                    {/* External Link */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openTikTok(currentVideo.video_id);
-                      }}
-                      className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-md rounded-full text-gray-900 hover:bg-white transition-all shadow-lg"
-                    >
-                      <ExternalLink className="w-5 h-5" />
-                    </button>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Mobile Scroll Indicator */}
-        <div className="flex justify-center gap-1 mt-6">
+        <div className="md:hidden flex justify-center gap-1 mt-6">
           {videos.slice(0, Math.min(videos.length, 5)).map((_, idx) => (
             <div
               key={idx}
@@ -679,22 +724,38 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       {isFullscreen && activeVideoId && (
         <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
           <div className="w-full h-full max-w-screen-sm">
-            <TikTokEmbedPlayer
-              videoId={currentVideo.video_id}
-              username={username}
-              thumbnailUrl={currentVideo.cloudinary?.url || currentVideo.thumbnail_url || ''}
-              description={currentVideo.description}
-              likeCount={currentVideo.like_count}
-              commentCount={currentVideo.comment_count}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={() => setIsFullscreen(false)}
-            />
+            {(() => {
+              const video = videos.find(v => v.video_id === activeVideoId);
+              if (!video) return null;
+              return (
+                <TikTokEmbedPlayer
+                  videoId={video.video_id}
+                  username={username}
+                  thumbnailUrl={video.cloudinary?.url || video.thumbnail_url || ''}
+                  description={video.description}
+                  likeCount={video.like_count}
+                  commentCount={video.comment_count}
+                  isFullscreen={isFullscreen}
+                  onToggleFullscreen={() => setIsFullscreen(false)}
+                  onClose={() => setIsFullscreen(false)}
+                />
+              );
+            })()}
           </div>
         </div>
       )}
 
       {/* CSS */}
       <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
