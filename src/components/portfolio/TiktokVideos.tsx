@@ -90,8 +90,9 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // ✅ Start muted (BROWSER POLICY)
   const [isPaused, setIsPaused] = useState(false);
+  const [hasUserUnmuted, setHasUserUnmuted] = useState(false); // ✅ Track if user has unmuted
   
   // ✅ Video progress tracking
   const [videoProgress, setVideoProgress] = useState(0);
@@ -141,10 +142,10 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [videos]);
 
   /* =======================
-     CREATE IFRAME URL
+     CREATE IFRAME URL - MUST START MUTED (BROWSER POLICY)
   ======================= */
   const createIframeUrl = useCallback((videoId: string): string => {
-    // ✅ Autoplay with sound (muted=0)
+    // ✅ MUTED AUTOPLAY ONLY (browser policy)
     return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=1`;
   }, []);
 
@@ -247,7 +248,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           closestCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
           setCurrentIndex(closestIndex);
         }
-      }, 100); // ✅ Reduced from 150ms to 100ms for smoother feel
+      }, 100);
     };
 
     container.addEventListener('scroll', handleScroll);
@@ -321,6 +322,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     
     setIsLoading(true);
     setIsPaused(false);
+    setIsMuted(true); // ✅ Reset to muted for new video (browser policy)
+    setHasUserUnmuted(false); // ✅ Reset unmute state
     setVideoProgress(0);
     
     setActiveVideoId(videoId);
@@ -328,7 +331,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     
     setTimeout(() => {
       setIsLoading(false);
-      console.log(`✅ Iframe ready for ${getVideoNumber(videoId)}`);
+      console.log(`✅ Iframe ready for ${getVideoNumber(videoId)} (muted by default)`);
     }, 1500);
   }, [activeVideoId, getVideoNumber, createIframeUrl]);
 
@@ -341,6 +344,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     setIframeUrl("");
     setIsLoading(false);
     setIsPaused(false);
+    setIsMuted(true);
+    setHasUserUnmuted(false);
     setVideoProgress(0);
     
     if (progressInterval.current) {
@@ -364,7 +369,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [isPaused]);
 
   /* =======================
-     TOGGLE MUTE
+     TOGGLE MUTE - NOW WORKS (user gesture required)
   ======================= */
   const toggleMute = useCallback(() => {
     if (!iframeRef.current) return;
@@ -375,7 +380,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       '*'
     );
     setIsMuted(!isMuted);
-    console.log(`🔊 ${command.toUpperCase()}`);
+    setHasUserUnmuted(!isMuted); // ✅ Track user's unmute action
+    console.log(`🔊 ${command.toUpperCase()} (user gesture)`);
   }, [isMuted]);
 
   const openTikTok = useCallback((videoId: string) => {
@@ -632,6 +638,22 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               )}
                             </div>
 
+                            {/* ✅ "Tap for Sound" Message (only when muted) */}
+                            {isMuted && !hasUserUnmuted && (
+                              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                                <div className="flex flex-col items-center animate-pulse">
+                                  <div className="bg-black/60 backdrop-blur-sm rounded-full p-3 mb-2">
+                                    <VolumeX className="w-8 h-8 text-white" />
+                                  </div>
+                                  <div className="bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
+                                    <p className="text-white text-sm font-semibold whitespace-nowrap">
+                                      Tap speaker icon for sound
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
                               <div className="flex items-end justify-between">
                                 <div className="flex-1 mr-4">
@@ -650,10 +672,20 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                                     )}
                                   </button>
 
-                                  {/* ✅ Mute/Unmute Button */}
-                                  <button onClick={toggleMute} className="hover:scale-110 transition-transform">
+                                  {/* ✅ Mute/Unmute Button with visual feedback */}
+                                  <button 
+                                    onClick={toggleMute} 
+                                    className="hover:scale-110 transition-transform relative"
+                                  >
                                     {isMuted ? (
-                                      <VolumeX className="w-7 h-7 text-white drop-shadow-lg" />
+                                      <>
+                                        <VolumeX className="w-7 h-7 text-white drop-shadow-lg" />
+                                        {!hasUserUnmuted && (
+                                          <div className="absolute -top-2 -right-2 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center animate-pulse">
+                                            <span className="text-[10px] font-bold text-white">!</span>
+                                          </div>
+                                        )}
+                                      </>
                                     ) : (
                                       <Volume2 className="w-7 h-7 text-white drop-shadow-lg" />
                                     )}
