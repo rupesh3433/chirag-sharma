@@ -34,18 +34,34 @@ type InstagramReel = {
   productType?: string;
 };
 
+
+// This is complete data that my backend sends. If not used then also keep here. Do not remove
 type InstagramApiResponse = {
   success: boolean;
-  count: number;
-  reels: InstagramReel[];
-  source: "mongodb_cache" | "rapidapi_fresh" | "mongodb_cache_locked" | "mongodb_cache_fallback" | "none";
+  source:
+    | "mongodb_cache"
+    | "rapidapi_fresh"
+    | "mongodb_cache_locked"
+    | "mongodb_cache_fallback"
+    | "none";
+
   cached_at?: string;
   cache_age_days?: number;
-  timestamp: string;
-  message?: string;
-  warning?: string;
-  error?: string;
-  cached_to_db?: boolean;
+  cache_age_seconds?: number;
+
+  user?: {
+    username: string;
+    full_name?: string;
+    bio?: string;
+    followers_count?: number;
+    following_count?: number;
+    posts_count?: number;
+    is_verified?: boolean;
+    profile_picture_url?: string;
+  };
+
+  reels: InstagramReel[];
+
   metrics?: {
     cloudinary_uploads: number;
     cloudinary_deletes: number;
@@ -53,7 +69,13 @@ type InstagramApiResponse = {
     queued_for_retry: number;
     duration_seconds: number;
   };
+
+  message?: string;
+  warning?: string;
+  error?: string;
+  timestamp: string;
 };
+
 
 type InstagramVideosProps = {
   username?: string;
@@ -87,11 +109,15 @@ const InstagramVideos = ({
   const [reels, setReels] = useState<InstagramReel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<InstagramApiResponse["user"] | null>(null);
   const [dataSource, setDataSource] = useState<string>("");
   const [cacheInfo, setCacheInfo] = useState<{ age_days?: number; cached_at?: string } | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -131,17 +157,30 @@ const InstagramVideos = ({
     setLoading(true);
     setError(null);
 
+    // ✅ FIX: API_URL guard
+    if (!API_URL) {
+      setError("API URL not configured");
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log(`🚀 Fetching reels from: ${API_URL}/public/instagram/reels?username=${username}&limit=${limit}`);
+      // ✅ FIX: Changed from `limit` to `count` parameter
+      const url = `${API_URL}/public/instagram/profile?username=${username}&count=${limit}`;
+      console.log(`🚀 Fetching reels from: ${url}`);
       
-      const response = await fetch(`${API_URL}/public/instagram/reels?username=${username}&limit=${limit}`);
+      const response = await fetch(url);
       const data: InstagramApiResponse = await response.json();
 
       console.log("📦 Instagram API Response:", data);
 
-      if (data.success && data.reels && data.reels.length > 0) {
+      // ✅ FIX: Corrected success condition - removed length check
+      if (data.success && Array.isArray(data.reels)) {
         setReels(data.reels);
         setDataSource(data.source);
+        
+        // ✅ FIX: Store user/profile data
+        setProfile(data.user ?? null);
         
         // Store cache info
         if (data.cache_age_days !== undefined && data.cached_at) {
@@ -176,19 +215,12 @@ const InstagramVideos = ({
           console.log(`🔒 Using cache while refresh in progress (age: ${data.cache_age_days} days)`);
         } else if (data.source === "mongodb_cache_fallback") {
           console.warn(`⚠️ API failed, using old cache (age: ${data.cache_age_days} days)`);
-          if (data.warning) {
-            setError(data.warning);
-          }
+          // ✅ FIX: Removed setError for fallback - it's a success state
         }
       } else if (data.success === false) {
         // API returned error
         console.error("❌ Instagram API returned error:", data.error);
         setError(data.error || "Failed to fetch reels");
-        setReels([]);
-      } else {
-        // Empty response
-        console.warn("⚠️ Instagram API returned no reels");
-        setError("No reels available");
         setReels([]);
       }
     } catch (err) {
@@ -205,28 +237,128 @@ const InstagramVideos = ({
   }, [username, limit]);
 
   /* =======================
-     SCROLL HANDLERS
+     IMPROVED SCROLL HANDLERS WITH SNAP BEHAVIOR
   ======================= */
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
     
     const container = scrollContainerRef.current;
-    const scrollAmount = container.offsetWidth / 3;
+    const cardWidth = container.querySelector('.reel-card')?.clientWidth || 0;
+    const gap = 16; // 4 units of gap (gap-4 = 1rem = 16px)
+    const scrollAmount = cardWidth + gap;
     
     if (direction === 'left') {
       container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      // ✅ FIX: Prevent negative index
       setCurrentIndex(Math.max(0, currentIndex - 1));
     } else {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      setCurrentIndex(Math.min(reels.length - 3, currentIndex + 1));
+      // ✅ FIX: Safer boundary check
+      setCurrentIndex(Math.max(0, Math.min(reels.length - 1, currentIndex + 1)));
     }
   };
+
+  /* =======================
+     TOUCH/MOUSE DRAG HANDLERS FOR SMOOTH SCROLLING
+  ======================= */
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+    setScrollLeft(scrollContainerRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    snapToNearestCard();
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      snapToNearestCard();
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!scrollContainerRef.current) return;
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX - scrollContainerRef.current.offsetLeft);
+    setScrollLeft(scrollContainerRef.current.scrollLeft);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    const x = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    snapToNearestCard();
+  };
+
+  // Snap to nearest card after dragging
+  const snapToNearestCard = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const cardWidth = container.querySelector('.reel-card')?.clientWidth || 0;
+    const gap = 16;
+    const scrollPosition = container.scrollLeft;
+    const cardWithGap = cardWidth + gap;
+    
+    // Calculate nearest card index
+    const nearestIndex = Math.round(scrollPosition / cardWithGap);
+    const targetScroll = nearestIndex * cardWithGap;
+    
+    container.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth'
+    });
+    
+    // ✅ Update current index safely
+    setCurrentIndex(Math.max(0, Math.min(reels.length - 1, nearestIndex)));
+  };
+
+  // Update index based on scroll position
+  const handleScroll = () => {
+    if (!scrollContainerRef.current || isDragging) return;
+    
+    const container = scrollContainerRef.current;
+    const cardWidth = container.querySelector('.reel-card')?.clientWidth || 0;
+    const gap = 16;
+    const scrollPosition = container.scrollLeft;
+    const cardWithGap = cardWidth + gap;
+    
+    const newIndex = Math.round(scrollPosition / cardWithGap);
+    setCurrentIndex(Math.max(0, Math.min(reels.length - 1, newIndex)));
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [reels.length, isDragging]);
 
   /* =======================
      OPEN INSTAGRAM
   ======================= */
   const openInstagram = (postUrl: string) => {
-    window.open(postUrl, '_blank', 'noopener,noreferrer');
+    if (!isDragging) {
+      window.open(postUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   /* =======================
@@ -255,7 +387,7 @@ const InstagramVideos = ({
             <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Reels Available in Instagram</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Reels Available</h3>
             <p className="text-gray-600 mb-4">{error || "Unable to load Instagram reels at this time"}</p>
             <button 
               onClick={fetchReels}
@@ -301,7 +433,26 @@ const InstagramVideos = ({
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">{heading}</h2>
-            <p className="text-gray-600 mt-1">@{username}</p>
+            
+            {/* ✅ FIX: Show user profile info with followers/following */}
+            {profile && (
+              <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium">@{profile.username}</span>
+                  {profile.is_verified && (
+                    <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-gray-400">•</span>
+                <span className="font-semibold">{formatNumber(profile.followers_count ?? 0)}</span>
+                <span className="text-gray-500">followers</span>
+                <span className="text-gray-400">•</span>
+                <span className="font-semibold">{formatNumber(profile.following_count ?? 0)}</span>
+                <span className="text-gray-500">following</span>
+              </div>
+            )}
           </div>
           
           {/* Desktop Navigation */}
@@ -316,7 +467,7 @@ const InstagramVideos = ({
             </button>
             <button
               onClick={() => scroll('right')}
-              disabled={currentIndex >= reels.length - 3}
+              disabled={currentIndex >= reels.length - 1}
               className="p-2 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
               aria-label="Next"
             >
@@ -338,16 +489,25 @@ const InstagramVideos = ({
           </div>
         </div>
 
-        {/* Reels Container */}
+        {/* Reels Container - WITH IMPROVED SCROLLING */}
         <div className="relative">
           <div 
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4"
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 cursor-grab active:cursor-grabbing"
             style={{ 
               scrollbarWidth: 'none', 
               msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch'
+              WebkitOverflowScrolling: 'touch',
+              scrollSnapType: 'x mandatory',
+              userSelect: isDragging ? 'none' : 'auto'
             }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             {reels.map((reel) => {
               // Use Cloudinary URL if available, otherwise original thumbnail
@@ -356,8 +516,8 @@ const InstagramVideos = ({
               return (
                 <div
                   key={reel.id}
-                  className="flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-start"
-                  onMouseEnter={() => setHoveredId(reel.id)}
+                  className="reel-card flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-start snap-always"
+                  onMouseEnter={() => !isDragging && setHoveredId(reel.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
                   {/* Instagram-like Card */}
@@ -373,6 +533,7 @@ const InstagramVideos = ({
                         alt={reel.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
+                        draggable="false"
                         onError={(e) => {
                           // Fallback to original thumbnail if Cloudinary fails
                           if (e.currentTarget.src !== reel.thumbnail) {
@@ -539,6 +700,25 @@ const InstagramVideos = ({
         
         .animate-fade-in {
           animation: fade-in 0.3s ease-out;
+        }
+
+        /* Smooth scroll snapping */
+        .snap-x {
+          scroll-snap-type: x mandatory;
+        }
+        
+        .snap-start {
+          scroll-snap-align: start;
+        }
+
+        .snap-always {
+          scroll-snap-stop: always;
+        }
+
+        /* Prevent text selection during drag */
+        .cursor-grabbing * {
+          user-select: none !important;
+          -webkit-user-select: none !important;
         }
       `}</style>
     </section>
