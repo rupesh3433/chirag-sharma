@@ -78,23 +78,17 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   const [cacheInfo, setCacheInfo] = useState<{ age_days?: number; cached_at?: string } | null>(null);
   
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
-  // Iframe pool state
-  const [iframe1VideoId, setIframe1VideoId] = useState<string | null>(null);
-  const [iframe2VideoId, setIframe2VideoId] = useState<string | null>(null);
-  const [iframe1Src, setIframe1Src] = useState<string>("");
-  const [iframe2Src, setIframe2Src] = useState<string>("");
-  const [loadingVideoId, setLoadingVideoId] = useState<string | null>(null);
+  // ✅ SINGLE IFRAME STATE - Only one video can have an iframe at a time
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [iframeUrl, setIframeUrl] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const iframe1Ref = useRef<HTMLIFrameElement | null>(null);
-  const iframe2Ref = useRef<HTMLIFrameElement | null>(null);
-  const isInitialLoadComplete = useRef(false);
-  const isPreloading = useRef(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -137,130 +131,10 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   /* =======================
      CREATE IFRAME URL
   ======================= */
-  const createIframeUrl = useCallback((videoId: string, autoplay: boolean = false): string => {
-    return `https://www.tiktok.com/player/v1/${videoId}?autoplay=${autoplay ? 1 : 0}&loop=1&muted=${autoplay ? 0 : 1}`;
+  const createIframeUrl = useCallback((videoId: string): string => {
+    // Always autoplay=1 because we only create iframe when user clicks
+    return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=0`;
   }, []);
-
-  /* =======================
-     IFRAME POOL HELPERS
-  ======================= */
-  const hasIframeAssigned = useCallback((videoId: string): boolean => {
-    return iframe1VideoId === videoId || iframe2VideoId === videoId;
-  }, [iframe1VideoId, iframe2VideoId]);
-
-  const getIdleIframeSlot = useCallback((): 1 | 2 | null => {
-    if (iframe1VideoId !== activeVideoId) {
-      console.log(`🔵 Idle iframe: Slot 1 (currently: ${iframe1VideoId ? getVideoNumber(iframe1VideoId) : 'empty'})`);
-      return 1;
-    }
-    if (iframe2VideoId !== activeVideoId) {
-      console.log(`🔵 Idle iframe: Slot 2 (currently: ${iframe2VideoId ? getVideoNumber(iframe2VideoId) : 'empty'})`);
-      return 2;
-    }
-    
-    console.warn(`⚠️ No idle iframe slot available!`);
-    return null;
-  }, [iframe1VideoId, iframe2VideoId, activeVideoId, getVideoNumber]);
-
-  const assignIframeToVideo = useCallback((videoId: string, slot: 1 | 2, showLoader: boolean = true) => {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`🎬 ASSIGNING IFRAME to ${getVideoNumber(videoId)}`);
-    console.log(`   Slot: ${slot}`);
-    console.log(`   Show Loader: ${showLoader}`);
-    console.log(`${'='.repeat(60)}\n`);
-
-    const url = createIframeUrl(videoId, false); // Start with autoplay=0
-
-    if (slot === 1) {
-      setIframe1VideoId(videoId);
-      setIframe1Src(url);
-    } else {
-      setIframe2VideoId(videoId);
-      setIframe2Src(url);
-    }
-
-    if (showLoader) {
-      setLoadingVideoId(videoId);
-    }
-  }, [getVideoNumber, createIframeUrl]);
-
-  const startPlayback = useCallback((videoId: string) => {
-    console.log(`▶️ STARTING PLAYBACK for ${getVideoNumber(videoId)}`);
-    
-    const whichSlot = iframe1VideoId === videoId ? 1 : iframe2VideoId === videoId ? 2 : null;
-    
-    if (whichSlot === 1) {
-      const newUrl = createIframeUrl(videoId, true); // autoplay=1
-      console.log(`   Updating Slot 1 src to autoplay`);
-      setIframe1Src(newUrl);
-    } else if (whichSlot === 2) {
-      const newUrl = createIframeUrl(videoId, true); // autoplay=1
-      console.log(`   Updating Slot 2 src to autoplay`);
-      setIframe2Src(newUrl);
-    }
-    
-    setLoadingVideoId(null);
-  }, [iframe1VideoId, iframe2VideoId, createIframeUrl, getVideoNumber]);
-
-  const handleIframeReady = useCallback((videoId: string) => {
-    console.log(`✅ IFRAME READY for ${getVideoNumber(videoId)}`);
-    setLoadingVideoId(null);
-    
-    // Preload next video after current one is ready
-    setTimeout(() => {
-      const currentIdx = videos.findIndex(v => v.video_id === videoId);
-      if (currentIdx !== -1 && currentIdx < videos.length - 1) {
-        const nextVideo = videos[currentIdx + 1];
-        const nextHasIframe = hasIframeAssigned(nextVideo.video_id);
-        
-        if (!nextHasIframe && !isPreloading.current) {
-          console.log(`\n🔄 PRELOADING ${getVideoNumber(nextVideo.video_id)} (next after ${getVideoNumber(videoId)})`);
-          isPreloading.current = true;
-          
-          const idleSlot = getIdleIframeSlot();
-          if (idleSlot) {
-            assignIframeToVideo(nextVideo.video_id, idleSlot, false);
-          }
-          
-          setTimeout(() => {
-            isPreloading.current = false;
-          }, 1000);
-        } else if (nextHasIframe) {
-          console.log(`⏭️ ${getVideoNumber(nextVideo.video_id)} already has iframe - skipping preload`);
-        }
-      }
-    }, 1500);
-  }, [videos, hasIframeAssigned, getIdleIframeSlot, assignIframeToVideo, getVideoNumber]);
-
-  /* =======================
-     INITIAL LOAD (Card 1 & 2)
-  ======================= */
-  useEffect(() => {
-    if (videos.length === 0 || isInitialLoadComplete.current) return;
-    
-    console.log(`\n${'*'.repeat(60)}`);
-    console.log(`🚀 INITIAL PAGE LOAD - LOADING IFRAMES`);
-    console.log(`${'*'.repeat(60)}`);
-    
-    // Load Video 1 iframe
-    if (videos[0]) {
-      console.log(`📺 Creating iframe for ${getVideoNumber(videos[0].video_id)} in Slot 1 (silent)`);
-      setIframe1VideoId(videos[0].video_id);
-      setIframe1Src(createIframeUrl(videos[0].video_id, false));
-    }
-    
-    // Load Video 2 iframe after delay
-    setTimeout(() => {
-      if (videos[1]) {
-        console.log(`📺 Creating iframe for ${getVideoNumber(videos[1].video_id)} in Slot 2 (silent)`);
-        setIframe2VideoId(videos[1].video_id);
-        setIframe2Src(createIframeUrl(videos[1].video_id, false));
-      }
-      
-      isInitialLoadComplete.current = true;
-      console.log(`✅ Initial iframes created and ready\n`);
-    }, 1000);
-  }, [videos, getVideoNumber, createIframeUrl]);
 
   /* =======================
      FETCH PROFILE
@@ -322,7 +196,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [username, limit]);
 
   /* =======================
-     SCROLL & SNAP (FIXED - NO ACTIVATION ON SWIPE)
+     SCROLL & SNAP (NAVIGATION ONLY - NO PLAYBACK)
   ======================= */
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -357,12 +231,14 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         });
         
         if (closestCard) {
-          // ✅ FIXED: Only snap and update index, NO ACTIVATION
+          // ✅ SWIPE = NAVIGATION ONLY
           closestCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
           setCurrentIndex(closestIndex);
           
-          // ❌ REMOVED: handleCardActivation(videoId, false);
-          // Swipe now ONLY navigates, does NOT play videos
+          // ❌ NO ACTIVATION ON SWIPE
+          // ❌ NO IFRAME CREATION
+          // ❌ NO PLAYBACK
+          // ❌ NO PRELOAD
         }
       }, 150);
     };
@@ -372,91 +248,74 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [videos]); // ✅ Removed activeVideoId dependency
+  }, [videos]);
 
   /* =======================
-     HANDLE CARD CLICK (ONLY WAY TO ACTIVATE VIDEO)
+     HANDLE CARD CLICK (ONLY WAY TO CREATE IFRAME)
   ======================= */
   const handleCardClick = useCallback((videoId: string) => {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`👆 USER CLICKED ${getVideoNumber(videoId)}`);
     console.log(`   Current Active: ${activeVideoId ? getVideoNumber(activeVideoId) : 'none'}`);
-    console.log(`   Iframe 1: ${iframe1VideoId ? getVideoNumber(iframe1VideoId) : 'empty'}`);
-    console.log(`   Iframe 2: ${iframe2VideoId ? getVideoNumber(iframe2VideoId) : 'empty'}`);
     console.log(`${'='.repeat(60)}`);
     
-    setActiveVideoId(videoId);
-    
-    const alreadyHasIframe = hasIframeAssigned(videoId);
-    
-    if (alreadyHasIframe) {
-      console.log(`✅ ${getVideoNumber(videoId)} ALREADY HAS IFRAME - PLAY INSTANTLY`);
-      // Start playback immediately
-      startPlayback(videoId);
-      // Trigger preload after a moment
-      setTimeout(() => {
-        handleIframeReady(videoId);
-      }, 500);
-    } else {
-      console.log(`❌ ${getVideoNumber(videoId)} DOES NOT HAVE IFRAME - LOADING NOW`);
-      
-      const idleSlot = getIdleIframeSlot();
-      
-      if (idleSlot) {
-        console.log(`🔄 Using idle Slot ${idleSlot} for ${getVideoNumber(videoId)}`);
-        assignIframeToVideo(videoId, idleSlot, true); // Show loader for user clicks
-        
-        // Wait for iframe to load, then start playback
-        setTimeout(() => {
-          startPlayback(videoId);
-          handleIframeReady(videoId);
-        }, 2000);
-      } else {
-        console.error(`❌ NO IDLE IFRAME SLOT AVAILABLE!`);
-      }
+    // Case 1: Clicking the same card that's already playing
+    if (activeVideoId === videoId) {
+      console.log(`✅ Same video already playing - do nothing`);
+      return;
     }
-  }, [activeVideoId, iframe1VideoId, iframe2VideoId, hasIframeAssigned, getIdleIframeSlot, assignIframeToVideo, startPlayback, handleIframeReady, getVideoNumber]);
+    
+    // Case 2: Clicking a different card (or first click)
+    console.log(`🎬 Creating iframe for ${getVideoNumber(videoId)}`);
+    
+    // Destroy any existing iframe
+    if (activeVideoId) {
+      console.log(`🗑️ Destroying existing iframe for ${getVideoNumber(activeVideoId)}`);
+    }
+    
+    // Show loader
+    setIsLoading(true);
+    
+    // Create new iframe
+    setActiveVideoId(videoId);
+    setIframeUrl(createIframeUrl(videoId));
+    
+    // Hide loader after iframe loads
+    setTimeout(() => {
+      setIsLoading(false);
+      console.log(`✅ Iframe ready for ${getVideoNumber(videoId)}`);
+    }, 1500);
+  }, [activeVideoId, getVideoNumber, createIframeUrl]);
 
-  const openTikTok = useCallback((videoId: string) => {
-    const url = `https://www.tiktok.com/@${username}/video/${videoId}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }, [username]);
+  /* =======================
+     CLOSE VIDEO (DESTROY IFRAME)
+  ======================= */
+  const handleCloseVideo = useCallback(() => {
+    console.log(`❌ Closing video - destroying iframe`);
+    setActiveVideoId(null);
+    setIframeUrl("");
+    setIsLoading(false);
+  }, []);
 
   /* =======================
      TOGGLE MUTE
   ======================= */
   const toggleMute = useCallback(() => {
-    if (!activeVideoId) return;
-    
-    const whichIframe = iframe1VideoId === activeVideoId ? iframe1Ref.current : iframe2Ref.current;
-    if (!whichIframe) return;
+    if (!iframeRef.current) return;
     
     const command = isMuted ? 'unMute' : 'mute';
-    whichIframe.contentWindow?.postMessage(
+    iframeRef.current.contentWindow?.postMessage(
       { 'x-tiktok-player': true, type: command },
       '*'
     );
     setIsMuted(!isMuted);
-    console.log(`🔊 ${command.toUpperCase()} ${getVideoNumber(activeVideoId)}`);
-  }, [activeVideoId, isMuted, iframe1VideoId, getVideoNumber]);
+    console.log(`🔊 ${command.toUpperCase()}`);
+  }, [isMuted]);
 
-  /* =======================
-     LISTEN TO IFRAME MESSAGES
-  ======================= */
-  useEffect(() => {
-    const handleMessage = (e: MessageEvent) => {
-      if (e.data && typeof e.data === 'object' && e.data['x-tiktok-player']) {
-        if (e.data.type === 'onPlayerReady') {
-          if (loadingVideoId) {
-            console.log(`🎥 TikTok player ready for ${getVideoNumber(loadingVideoId)}`);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [loadingVideoId, getVideoNumber]);
+  const openTikTok = useCallback((videoId: string) => {
+    const url = `https://www.tiktok.com/@${username}/video/${videoId}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [username]);
 
   /* =======================
      NAVIGATION
@@ -530,33 +389,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   return (
     <section className="py-12 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-[1280px] mx-auto px-4">
-        {/* ✅ FIXED: Single Iframe Pool (Hidden, No Duplication) */}
-        <div className="hidden">
-          {iframe1VideoId && iframe1Src && (
-            <iframe
-              ref={iframe1Ref}
-              key={`iframe1-${iframe1VideoId}`}
-              src={iframe1Src}
-              className="w-full h-full border-none"
-              allow="autoplay; fullscreen; encrypted-media"
-              referrerPolicy="strict-origin-when-cross-origin"
-              title={`TikTok Slot 1`}
-            />
-          )}
-          
-          {iframe2VideoId && iframe2Src && (
-            <iframe
-              ref={iframe2Ref}
-              key={`iframe2-${iframe2VideoId}`}
-              src={iframe2Src}
-              className="w-full h-full border-none"
-              allow="autoplay; fullscreen; encrypted-media"
-              referrerPolicy="strict-origin-when-cross-origin"
-              title={`TikTok Slot 2`}
-            />
-          )}
-        </div>
-
         {/* Cache Info Banner */}
         {(dataSource === "mongodb_cache_locked" || dataSource === "mongodb_cache_fallback") && cacheInfo && (
           <div className="mb-6 border rounded-lg p-4 flex items-center gap-3 bg-amber-50 border-amber-200 text-amber-700">
@@ -641,9 +473,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
             {videos.map((video, index) => {
               const thumbnailUrl = video.cloudinary?.url || video.thumbnail_url || '';
               const isActive = activeVideoId === video.video_id;
-              const hasIframe = iframe1VideoId === video.video_id || iframe2VideoId === video.video_id;
-              const isLoading = loadingVideoId === video.video_id;
-              const whichIframe = iframe1VideoId === video.video_id ? 1 : iframe2VideoId === video.video_id ? 2 : null;
               
               return (
                 <div
@@ -658,11 +487,13 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                 >
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
                     <div className="relative aspect-[9/16] bg-black overflow-hidden">
-                      {/* ✅ FIXED: Show iframe ONLY when active (no duplication) */}
-                      {isActive && hasIframe && whichIframe && (
+                      
+                      {/* ✅ SINGLE IFRAME - Only created when this card is clicked */}
+                      {isActive && iframeUrl && (
                         <div className="absolute inset-0 w-full h-full z-10">
                           <iframe
-                            src={whichIframe === 1 ? iframe1Src : iframe2Src}
+                            ref={iframeRef}
+                            src={iframeUrl}
                             className="absolute inset-0 w-full h-full border-none"
                             allow="autoplay; fullscreen; encrypted-media"
                             referrerPolicy="strict-origin-when-cross-origin"
@@ -684,7 +515,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => setActiveVideoId(null)}
+                                  onClick={handleCloseVideo}
                                   className="p-2 bg-black/50 backdrop-blur-sm rounded-full text-white hover:bg-black/70 transition-all"
                                 >
                                   <X className="w-5 h-5" />
@@ -736,8 +567,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                         </div>
                       )}
 
-                      {/* Thumbnail + Play button (Only when NOT active or loading) */}
-                      {(!isActive || isLoading) && (
+                      {/* Thumbnail + Play button (Shown when NOT active) */}
+                      {!isActive && (
                         <div
                           onClick={() => handleCardClick(video.video_id)}
                           className="relative w-full h-full cursor-pointer group"
@@ -751,29 +582,18 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                           
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-                          {isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
-                              <div className="text-center">
-                                <div className="w-16 h-16 border-4 border-white/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-3"></div>
-                                <p className="text-white text-sm font-medium">Loading video...</p>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div 
+                              className="transition-all duration-300"
+                              style={{
+                                transform: hoveredId === video.video_id ? 'scale(1.2)' : 'scale(1)',
+                              }}
+                            >
+                              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border-3 border-white/60">
+                                <PlayIcon size={36} className="text-white drop-shadow-lg" />
                               </div>
                             </div>
-                          )}
-
-                          {!isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div 
-                                className="transition-all duration-300"
-                                style={{
-                                  transform: hoveredId === video.video_id ? 'scale(1.2)' : 'scale(1)',
-                                }}
-                              >
-                                <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border-3 border-white/60">
-                                  <PlayIcon size={36} className="text-white drop-shadow-lg" />
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          </div>
 
                           <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
                             <div className="flex items-center gap-2">
@@ -832,6 +652,16 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                           >
                             <ExternalLink className="w-5 h-5" />
                           </button>
+                        </div>
+                      )}
+
+                      {/* Loading Overlay (Shown while iframe is loading) */}
+                      {isActive && isLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
+                          <div className="text-center">
+                            <div className="w-16 h-16 border-4 border-white/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-3"></div>
+                            <p className="text-white text-sm font-medium">Loading video...</p>
+                          </div>
                         </div>
                       )}
                     </div>
