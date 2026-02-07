@@ -94,7 +94,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.VITE_API_URL;
 
   /* =======================
      FORMAT HELPERS
@@ -629,15 +629,24 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             </div>
                           </div>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openTikTok(video.video_id);
-                            }}
-                            className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-md rounded-full text-gray-900 hover:bg-white transition-all shadow-lg"
-                          >
-                            <ExternalLink className="w-5 h-5" />
-                          </button>
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    openTikTok(video.video_id);
+  }}
+  className="
+    absolute top-2 right-2 z-20
+    p-1.5
+    bg-black/50 backdrop-blur-sm
+    rounded-md
+    text-white
+    hover:bg-black/70
+    transition
+  "
+>
+  <ExternalLink className="w-3.5 h-3.5" />
+</button>
+
                         </div>
                       )}
                     </div>
