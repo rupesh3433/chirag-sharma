@@ -84,15 +84,18 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
-  // ✅ SINGLE IFRAME STATE - Only one iframe exists at any time
+  // ✅ SINGLE IFRAME STATE
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // Start muted (browser policy)
+  const [isMuted, setIsMuted] = useState(true);
   
+  // ✅ CRITICAL REFS FOR AUDIO TO WORK
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const userGestureRef = useRef(false);  // Tracks if iframe was created by user click
+  const playerReadyRef = useRef(false);  // Tracks if TikTok sent onPlayerReady
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -126,10 +129,9 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
 
   /* =======================
      CREATE IFRAME URL
+     ✅ MUST start with muted=1
   ======================= */
   const createIframeUrl = useCallback((videoId: string): string => {
-    // Start muted (browser autoplay policy requirement)
-    // User can unmute with the button
     return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=1`;
   }, []);
 
@@ -193,10 +195,28 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [username, limit]);
 
   /* =======================
+     ✅ LISTEN FOR TIKTOK PLAYER READY
+     THIS IS MANDATORY FOR AUDIO TO WORK
+  ======================= */
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only process TikTok messages
+      if (!event.data || event.data['x-tiktok-player'] !== true) return;
+
+      // Player is ready - now unmute will work
+      if (event.data.type === 'onPlayerReady') {
+        playerReadyRef.current = true;
+        setIsLoading(false);
+        console.log('✅ TikTok player ready - audio can now be enabled');
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  /* =======================
      SCROLL & SNAP - NAVIGATION ONLY
-     ❌ NO iframe creation
-     ❌ NO playback
-     ❌ NO preload
   ======================= */
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -245,52 +265,76 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [videos]);
 
   /* =======================
-     HANDLE CARD CLICK
-     ✅ ONLY way to create iframe
-     ✅ Destroys previous iframe
-     ✅ Creates new iframe
+     ✅ HANDLE CARD CLICK (FIXED)
+     This marks the user gesture
   ======================= */
   const handleCardClick = useCallback((videoId: string) => {
-    // Same card - do nothing
-    if (activeVideoId === videoId) {
-      return;
-    }
-    
-    // Different card - destroy old, create new
+    if (activeVideoId === videoId) return;
+
+    // ✅ Mark this as user-initiated (CRITICAL)
+    userGestureRef.current = true;
+    playerReadyRef.current = false;
+
+    setIsMuted(true);
     setIsLoading(true);
-    setIsMuted(true); // Reset to muted (browser policy)
-    
+
+    // ✅ iframe MUST be created inside this click handler
     setActiveVideoId(videoId);
     setIframeUrl(createIframeUrl(videoId));
-    
-    // Hide loader after iframe loads
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+
+    console.log('🎬 Creating iframe (user gesture tracked)');
   }, [activeVideoId, createIframeUrl]);
 
   /* =======================
-     CLOSE VIDEO - Destroy iframe
+     ✅ CLOSE VIDEO (FIXED)
+     Reset all refs
   ======================= */
   const handleCloseVideo = useCallback(() => {
     setActiveVideoId(null);
     setIframeUrl("");
     setIsLoading(false);
     setIsMuted(true);
+
+    // ✅ Reset refs
+    userGestureRef.current = false;
+    playerReadyRef.current = false;
+
+    console.log('❌ Video closed - refs reset');
   }, []);
 
   /* =======================
-     TOGGLE MUTE
+     ✅ TOGGLE MUTE (FIXED)
+     Only works after player ready + user gesture
   ======================= */
   const toggleMute = useCallback(() => {
-    if (!iframeRef.current) return;
+    if (!iframeRef.current) {
+      console.log('❌ No iframe ref');
+      return;
+    }
     
-    const command = isMuted ? 'unMute' : 'mute';
+    if (!playerReadyRef.current) {
+      console.log('❌ Player not ready yet');
+      return;
+    }
+    
+    if (!userGestureRef.current) {
+      console.log('❌ No user gesture tracked');
+      return;
+    }
+
+    // ✅ All conditions met - send postMessage
+    const command = isMuted ? "unMute" : "mute";
+    
     iframeRef.current.contentWindow?.postMessage(
-      { 'x-tiktok-player': true, type: command },
-      '*'
+      {
+        type: command,
+        "x-tiktok-player": true,
+      },
+      "*"
     );
+
     setIsMuted(!isMuted);
+    console.log(`🔊 ${command.toUpperCase()} sent`);
   }, [isMuted]);
 
   const openTikTok = useCallback((videoId: string) => {
@@ -400,7 +444,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                   )}
                 </div>
                 
-                {/* Followers Info */}
                 <div className="flex items-center gap-4 text-sm">
                   {user.followers_count !== undefined && (
                     <div className="flex items-center gap-1">
@@ -492,7 +535,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
                     <div className="relative aspect-[9/16] bg-black overflow-hidden">
                       
-                      {/* ✅ SINGLE IFRAME - Only created when clicked */}
+                      {/* ✅ SINGLE IFRAME */}
                       {isActive && iframeUrl && (
                         <div className="absolute inset-0 w-full h-full z-10">
                           <iframe
@@ -504,9 +547,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             title={`TikTok video by @${username}`}
                           />
                           
-                          {/* ✅ MINIMAL OVERLAY - Only close and unmute buttons */}
+                          {/* ✅ MINIMAL OVERLAY - Only close and unmute */}
                           <div className="absolute top-4 right-4 flex flex-col gap-3 z-20 pointer-events-auto">
-                            {/* Close Button */}
                             <button
                               onClick={handleCloseVideo}
                               className="p-2.5 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 transition-all shadow-lg"
@@ -515,7 +557,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               <X className="w-5 h-5" />
                             </button>
                             
-                            {/* Unmute Button */}
                             <button
                               onClick={toggleMute}
                               className="p-2.5 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 transition-all shadow-lg relative"
@@ -524,7 +565,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               {isMuted ? (
                                 <>
                                   <VolumeX className="w-5 h-5" />
-                                  {/* Indicator for muted state */}
                                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
                                 </>
                               ) : (
@@ -535,7 +575,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                         </div>
                       )}
 
-                      {/* Thumbnail View - Shown when NOT active */}
+                      {/* Thumbnail View */}
                       {!isActive && (
                         <div
                           onClick={() => handleCardClick(video.video_id)}
@@ -550,7 +590,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                           
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-                          {/* Play Button */}
                           <div className="absolute inset-0 flex items-center justify-center">
                             <div 
                               className="transition-all duration-300"
@@ -564,7 +603,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             </div>
                           </div>
 
-                          {/* Top Info Bar */}
                           <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-pink-500 to-purple-500 p-0.5">
@@ -577,7 +615,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             <MoreHorizontal className="text-white drop-shadow-lg" size={20} />
                           </div>
 
-                          {/* Bottom Info */}
                           <div className="absolute bottom-0 left-0 right-0 p-4">
                             <div className="flex items-end justify-between">
                               <div className="flex-1 mr-4">
@@ -589,7 +626,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                                 </p>
                               </div>
 
-                              {/* Engagement Stats */}
                               <div className="flex flex-col gap-4">
                                 {video.like_count && video.like_count > 0 && (
                                   <div className="flex flex-col items-center">
@@ -615,7 +651,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             </div>
                           </div>
 
-                          {/* Open in TikTok Button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -673,7 +708,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         </div>
       </div>
 
-      {/* CSS */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -700,7 +734,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           overflow: hidden;
         }
         
-        /* Mobile swipe optimization */
         @media (max-width: 768px) {
           .smooth-scroll {
             scroll-snap-type: x mandatory;
