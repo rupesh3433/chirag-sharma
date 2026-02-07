@@ -145,7 +145,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   ======================= */
   const createIframeUrl = useCallback((videoId: string): string => {
     // ✅ Autoplay with sound (muted=0)
-    return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=0`;
+    return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=1`;
   }, []);
 
   /* =======================
