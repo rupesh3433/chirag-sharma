@@ -11,6 +11,8 @@ import {
   VolumeX,
   ExternalLink,
   X,
+  Play,
+  Pause,
 } from "lucide-react";
 
 /* =======================
@@ -38,7 +40,11 @@ type TikTokUser = {
   username: string;
   verified?: boolean;
   followers_count?: number;
+  following_count?: number;
+  total_likes_count?: number;
   profile_picture_url?: string;
+  bio?: string;
+  nickname?: string;
 };
 
 type TikTokVideosProps = {
@@ -80,15 +86,21 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
-  // ✅ SINGLE IFRAME STATE - Only one video can have an iframe at a time
+  // ✅ SINGLE IFRAME STATE
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  // ✅ Video progress tracking
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -132,7 +144,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
      CREATE IFRAME URL
   ======================= */
   const createIframeUrl = useCallback((videoId: string): string => {
-    // Always autoplay=1 because we only create iframe when user clicks
+    // ✅ Autoplay with sound (muted=0)
     return `https://www.tiktok.com/player/v1/${videoId}?autoplay=1&loop=1&muted=0`;
   }, []);
 
@@ -196,7 +208,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [username, limit]);
 
   /* =======================
-     SCROLL & SNAP (NAVIGATION ONLY - NO PLAYBACK)
+     SCROLL & SNAP (NAVIGATION ONLY)
   ======================= */
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -234,13 +246,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           // ✅ SWIPE = NAVIGATION ONLY
           closestCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
           setCurrentIndex(closestIndex);
-          
-          // ❌ NO ACTIVATION ON SWIPE
-          // ❌ NO IFRAME CREATION
-          // ❌ NO PLAYBACK
-          // ❌ NO PRELOAD
         }
-      }, 150);
+      }, 100); // ✅ Reduced from 150ms to 100ms for smoother feel
     };
 
     container.addEventListener('scroll', handleScroll);
@@ -251,7 +258,47 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [videos]);
 
   /* =======================
-     HANDLE CARD CLICK (ONLY WAY TO CREATE IFRAME)
+     VIDEO PROGRESS TRACKER
+  ======================= */
+  useEffect(() => {
+    if (activeVideoId && !isPaused) {
+      // Simulate progress (TikTok iframe doesn't expose real-time progress)
+      const video = videos.find(v => v.video_id === activeVideoId);
+      const duration = video?.duration || 15; // Default 15s if not available
+      
+      setVideoDuration(duration);
+      setVideoProgress(0);
+      
+      // Update progress every 100ms
+      let elapsed = 0;
+      progressInterval.current = setInterval(() => {
+        elapsed += 0.1;
+        const progress = (elapsed / duration) * 100;
+        
+        if (progress >= 100) {
+          setVideoProgress(100);
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+          }
+        } else {
+          setVideoProgress(progress);
+        }
+      }, 100);
+      
+      return () => {
+        if (progressInterval.current) {
+          clearInterval(progressInterval.current);
+        }
+      };
+    } else {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+    }
+  }, [activeVideoId, isPaused, videos]);
+
+  /* =======================
+     HANDLE CARD CLICK
   ======================= */
   const handleCardClick = useCallback((videoId: string) => {
     console.log(`\n${'='.repeat(60)}`);
@@ -259,28 +306,26 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     console.log(`   Current Active: ${activeVideoId ? getVideoNumber(activeVideoId) : 'none'}`);
     console.log(`${'='.repeat(60)}`);
     
-    // Case 1: Clicking the same card that's already playing
+    // Same card - do nothing
     if (activeVideoId === videoId) {
-      console.log(`✅ Same video already playing - do nothing`);
+      console.log(`✅ Same video already playing`);
       return;
     }
     
-    // Case 2: Clicking a different card (or first click)
+    // Different card - create new iframe
     console.log(`🎬 Creating iframe for ${getVideoNumber(videoId)}`);
     
-    // Destroy any existing iframe
     if (activeVideoId) {
       console.log(`🗑️ Destroying existing iframe for ${getVideoNumber(activeVideoId)}`);
     }
     
-    // Show loader
     setIsLoading(true);
+    setIsPaused(false);
+    setVideoProgress(0);
     
-    // Create new iframe
     setActiveVideoId(videoId);
     setIframeUrl(createIframeUrl(videoId));
     
-    // Hide loader after iframe loads
     setTimeout(() => {
       setIsLoading(false);
       console.log(`✅ Iframe ready for ${getVideoNumber(videoId)}`);
@@ -288,14 +333,35 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [activeVideoId, getVideoNumber, createIframeUrl]);
 
   /* =======================
-     CLOSE VIDEO (DESTROY IFRAME)
+     CLOSE VIDEO
   ======================= */
   const handleCloseVideo = useCallback(() => {
     console.log(`❌ Closing video - destroying iframe`);
     setActiveVideoId(null);
     setIframeUrl("");
     setIsLoading(false);
+    setIsPaused(false);
+    setVideoProgress(0);
+    
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+    }
   }, []);
+
+  /* =======================
+     TOGGLE PLAY/PAUSE
+  ======================= */
+  const togglePlayPause = useCallback(() => {
+    if (!iframeRef.current) return;
+    
+    const command = isPaused ? 'play' : 'pause';
+    iframeRef.current.contentWindow?.postMessage(
+      { 'x-tiktok-player': true, type: command },
+      '*'
+    );
+    setIsPaused(!isPaused);
+    console.log(`⏯️ ${command.toUpperCase()}`);
+  }, [isPaused]);
 
   /* =======================
      TOGGLE MUTE
@@ -404,23 +470,46 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           </div>
         )}
 
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">{heading}</h2>
+        {/* Header with User Info */}
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{heading}</h2>
             {user && (
-              <div className="flex items-center gap-2 text-gray-600 mt-1">
-                <span className="font-semibold text-gray-900">@{user.username}</span>
-                {user.verified && (
-                  <svg className="w-4 h-4 text-cyan-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                )}
-                {user.followers_count !== undefined && (
-                  <>
-                    <span>•</span>
-                    <span>{formatNumber(user.followers_count)} followers</span>
-                  </>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="font-semibold text-gray-900 text-lg">@{user.username}</span>
+                  {user.verified && (
+                    <svg className="w-5 h-5 text-cyan-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                
+                {/* ✅ Followers Info */}
+                <div className="flex items-center gap-4 text-sm">
+                  {user.followers_count !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900">{formatNumber(user.followers_count)}</span>
+                      <span className="text-gray-600">Followers</span>
+                    </div>
+                  )}
+                  {user.following_count !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900">{formatNumber(user.following_count)}</span>
+                      <span className="text-gray-600">Following</span>
+                    </div>
+                  )}
+                  {user.total_likes_count !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                      <span className="font-bold text-gray-900">{formatNumber(user.total_likes_count)}</span>
+                      <span className="text-gray-600">Likes</span>
+                    </div>
+                  )}
+                </div>
+                
+                {user.bio && (
+                  <p className="text-sm text-gray-700 max-w-2xl">{user.bio}</p>
                 )}
               </div>
             )}
@@ -463,11 +552,11 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         <div className="relative">
           <div 
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide scroll-smooth"
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide smooth-scroll"
             style={{
               scrollSnapType: 'x mandatory',
               scrollBehavior: 'smooth',
-              WebkitOverflowScrolling: 'touch'
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {videos.map((video, index) => {
@@ -480,7 +569,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                   ref={(el) => {
                     if (el) cardRefs.current.set(video.video_id, el);
                   }}
-                  className="flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-center"
+                  className="flex-shrink-0 w-full md:w-[calc(33.333%-11px)] snap-center slide-item"
                   style={{ scrollSnapAlign: 'center' }}
                   onMouseEnter={() => setHoveredId(video.video_id)}
                   onMouseLeave={() => setHoveredId(null)}
@@ -488,7 +577,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
                     <div className="relative aspect-[9/16] bg-black overflow-hidden">
                       
-                      {/* ✅ SINGLE IFRAME - Only created when this card is clicked */}
+                      {/* ✅ SINGLE IFRAME - With Controls */}
                       {isActive && iframeUrl && (
                         <div className="absolute inset-0 w-full h-full z-10">
                           <iframe
@@ -500,11 +589,19 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                             title={`TikTok video by @${username}`}
                           />
                           
+                          {/* ✅ Progress Bar */}
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-black/30 z-30">
+                            <div 
+                              className="h-full bg-cyan-500 transition-all duration-100"
+                              style={{ width: `${videoProgress}%` }}
+                            />
+                          </div>
+                          
                           {/* Overlay UI */}
                           <div className="absolute inset-0 pointer-events-none">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/50"></div>
 
-                            <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between pointer-events-auto z-20">
+                            <div className="absolute top-0 left-0 right-0 p-4 pt-6 flex items-center justify-between pointer-events-auto z-20">
                               <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-pink-500 to-purple-500 p-0.5">
                                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
@@ -523,6 +620,18 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               </div>
                             </div>
 
+                            {/* ✅ Play/Pause Overlay (Center) */}
+                            <div 
+                              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+                              onClick={togglePlayPause}
+                            >
+                              {isPaused && (
+                                <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in">
+                                  <Play className="w-10 h-10 text-white ml-1" />
+                                </div>
+                              )}
+                            </div>
+
                             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
                               <div className="flex items-end justify-between">
                                 <div className="flex-1 mr-4">
@@ -532,7 +641,17 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                                 </div>
 
                                 <div className="flex flex-col gap-4 items-center">
-                                  <button onClick={toggleMute}>
+                                  {/* ✅ Play/Pause Button */}
+                                  <button onClick={togglePlayPause} className="hover:scale-110 transition-transform">
+                                    {isPaused ? (
+                                      <Play className="w-7 h-7 text-white drop-shadow-lg fill-white" />
+                                    ) : (
+                                      <Pause className="w-7 h-7 text-white drop-shadow-lg fill-white" />
+                                    )}
+                                  </button>
+
+                                  {/* ✅ Mute/Unmute Button */}
+                                  <button onClick={toggleMute} className="hover:scale-110 transition-transform">
                                     {isMuted ? (
                                       <VolumeX className="w-7 h-7 text-white drop-shadow-lg" />
                                     ) : (
@@ -567,7 +686,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                         </div>
                       )}
 
-                      {/* Thumbnail + Play button (Shown when NOT active) */}
+                      {/* Thumbnail + Play button */}
                       {!isActive && (
                         <div
                           onClick={() => handleCardClick(video.video_id)}
@@ -655,7 +774,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                         </div>
                       )}
 
-                      {/* Loading Overlay (Shown while iframe is loading) */}
+                      {/* Loading Overlay */}
                       {isActive && isLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
                           <div className="text-center">
@@ -700,7 +819,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         </div>
       </div>
 
-      {/* CSS */}
+      {/* ✅ Enhanced CSS with smooth transitions */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -711,8 +830,13 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           scrollbar-width: none;
         }
         
-        .scroll-smooth {
+        .smooth-scroll {
           scroll-behavior: smooth;
+          transition: scroll-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .slide-item {
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .line-clamp-2 {
@@ -720,6 +844,34 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        
+        /* ✅ Mobile swipe optimization */
+        @media (max-width: 768px) {
+          .smooth-scroll {
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          .slide-item {
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
+          }
         }
       `}</style>
     </section>
