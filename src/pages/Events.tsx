@@ -67,7 +67,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 // Fetch events from backend (public endpoint - no auth required)
 const fetchEvents = async (): Promise<Event[]> => {
-  const response = await fetch(`${API_URL}/public/events/?is_active=true&page=1&limit=100`, {
+  const response = await fetch(`${API_URL}/public/events?is_active=true&page=1&limit=100`, {
     headers: {
       "Content-Type": "application/json",
     },

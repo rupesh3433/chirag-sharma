@@ -430,27 +430,64 @@ const InstagramVideos = ({
         )}
 
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">{heading}</h2>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{heading}</h2>
             
-            {/* ✅ FIX: Show user profile info with followers/following */}
+            {/* ✅ Profile info matching TikTok layout */}
             {profile && (
-              <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium">@{profile.username}</span>
+              <div className="space-y-2">
+                {/* Username with verification badge - Clickable */}
+                <a
+                  href={`https://www.instagram.com/${profile.username}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors w-fit"
+                >
+                  <span className="font-semibold text-gray-900 text-lg">
+                    @{profile.username}
+                  </span>
                   {profile.is_verified && (
-                    <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    <svg
+                      className="w-5 h-5 text-blue-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   )}
+                </a>
+
+                {/* Followers and Following - Bold numbers like TikTok */}
+                <div className="flex items-center gap-4 text-sm">
+                  {profile.followers_count !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900">
+                        {formatNumber(profile.followers_count)}
+                      </span>
+                      <span className="text-gray-600">Followers</span>
+                    </div>
+                  )}
+                  {profile.following_count !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900">
+                        {formatNumber(profile.following_count)}
+                      </span>
+                      <span className="text-gray-600">Following</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-gray-400">•</span>
-                <span className="font-semibold">{formatNumber(profile.followers_count ?? 0)}</span>
-                <span className="text-gray-500">followers</span>
-                <span className="text-gray-400">•</span>
-                <span className="font-semibold">{formatNumber(profile.following_count ?? 0)}</span>
-                <span className="text-gray-500">following</span>
+
+                {/* Bio on next line */}
+                {profile.bio && (
+                  <p className="text-sm text-gray-700 max-w-2xl">
+                    {profile.bio}
+                  </p>
+                )}
               </div>
             )}
           </div>
