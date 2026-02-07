@@ -10,7 +10,6 @@ import {
   Volume2,
   VolumeX,
   ExternalLink,
-  Maximize,
   X,
 } from "lucide-react";
 
@@ -80,7 +79,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
   // Iframe pool state
@@ -324,7 +322,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   }, [username, limit]);
 
   /* =======================
-     SCROLL & SNAP
+     SCROLL & SNAP (FIXED - NO ACTIVATION ON SWIPE)
   ======================= */
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -359,14 +357,12 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         });
         
         if (closestCard) {
+          // ✅ FIXED: Only snap and update index, NO ACTIVATION
           closestCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
           setCurrentIndex(closestIndex);
           
-          const videoId = videos[closestIndex].video_id;
-          if (videoId !== activeVideoId) {
-            console.log(`\n👉 SWIPE DETECTED to ${getVideoNumber(videoId)}`);
-            handleCardActivation(videoId, false);
-          }
+          // ❌ REMOVED: handleCardActivation(videoId, false);
+          // Swipe now ONLY navigates, does NOT play videos
         }
       }, 150);
     };
@@ -376,15 +372,14 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [videos, activeVideoId]);
+  }, [videos]); // ✅ Removed activeVideoId dependency
 
   /* =======================
-     HANDLE CARD ACTIVATION
+     HANDLE CARD CLICK (ONLY WAY TO ACTIVATE VIDEO)
   ======================= */
-  const handleCardActivation = useCallback((videoId: string, isUserClick: boolean = true) => {
+  const handleCardClick = useCallback((videoId: string) => {
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`🎯 CARD ACTIVATION: ${getVideoNumber(videoId)}`);
-    console.log(`   Trigger: ${isUserClick ? 'USER CLICK' : 'SWIPE'}`);
+    console.log(`👆 USER CLICKED ${getVideoNumber(videoId)}`);
     console.log(`   Current Active: ${activeVideoId ? getVideoNumber(activeVideoId) : 'none'}`);
     console.log(`   Iframe 1: ${iframe1VideoId ? getVideoNumber(iframe1VideoId) : 'empty'}`);
     console.log(`   Iframe 2: ${iframe2VideoId ? getVideoNumber(iframe2VideoId) : 'empty'}`);
@@ -409,7 +404,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       
       if (idleSlot) {
         console.log(`🔄 Using idle Slot ${idleSlot} for ${getVideoNumber(videoId)}`);
-        assignIframeToVideo(videoId, idleSlot, isUserClick);
+        assignIframeToVideo(videoId, idleSlot, true); // Show loader for user clicks
         
         // Wait for iframe to load, then start playback
         setTimeout(() => {
@@ -421,11 +416,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
       }
     }
   }, [activeVideoId, iframe1VideoId, iframe2VideoId, hasIframeAssigned, getIdleIframeSlot, assignIframeToVideo, startPlayback, handleIframeReady, getVideoNumber]);
-
-  const handleCardClick = useCallback((videoId: string) => {
-    console.log(`\n👆 USER CLICKED ${getVideoNumber(videoId)}`);
-    handleCardActivation(videoId, true);
-  }, [handleCardActivation, getVideoNumber]);
 
   const openTikTok = useCallback((videoId: string) => {
     const url = `https://www.tiktok.com/@${username}/video/${videoId}`;
@@ -540,7 +530,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   return (
     <section className="py-12 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-[1280px] mx-auto px-4">
-        {/* Hidden Iframe Pool */}
+        {/* ✅ FIXED: Single Iframe Pool (Hidden, No Duplication) */}
         <div className="hidden">
           {iframe1VideoId && iframe1Src && (
             <iframe
@@ -668,7 +658,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                 >
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
                     <div className="relative aspect-[9/16] bg-black overflow-hidden">
-                      {/* Show iframe if active and has one */}
+                      {/* ✅ FIXED: Show iframe ONLY when active (no duplication) */}
                       {isActive && hasIframe && whichIframe && (
                         <div className="absolute inset-0 w-full h-full z-10">
                           <iframe
@@ -746,7 +736,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                         </div>
                       )}
 
-                      {/* Thumbnail + Play button */}
+                      {/* Thumbnail + Play button (Only when NOT active or loading) */}
                       {(!isActive || isLoading) && (
                         <div
                           onClick={() => handleCardClick(video.video_id)}
