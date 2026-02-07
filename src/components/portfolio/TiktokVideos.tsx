@@ -638,22 +638,6 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               )}
                             </div>
 
-                            {/* ✅ "Tap for Sound" Message (only when muted) */}
-                            {isMuted && !hasUserUnmuted && (
-                              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                                <div className="flex flex-col items-center animate-pulse">
-                                  <div className="bg-black/60 backdrop-blur-sm rounded-full p-3 mb-2">
-                                    <VolumeX className="w-8 h-8 text-white" />
-                                  </div>
-                                  <div className="bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
-                                    <p className="text-white text-sm font-semibold whitespace-nowrap">
-                                      Tap speaker icon for sound
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
                             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
                               <div className="flex items-end justify-between">
                                 <div className="flex-1 mr-4">
