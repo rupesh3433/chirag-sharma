@@ -3,6 +3,7 @@ import React from "react";
 interface CardLayoutProps {
   width: string;
   aspectRatio: `${number}/${number}`;
+  paddingY?: string;
   children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ interface CardLayoutProps {
 export const CardLayout: React.FC<CardLayoutProps> = ({
   width,
   aspectRatio,
+  paddingY = "0em",
   children,
 }) => {
   return (
@@ -45,6 +47,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
              * must scale relative to THIS
              */
             fontSize: "clamp(14px, 1.05em, 16px)",
+            paddingBlock: paddingY, 
           }}
         >
           {children}

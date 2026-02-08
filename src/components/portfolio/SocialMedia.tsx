@@ -32,32 +32,32 @@ export default function SocialMediaPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <section className="py-6">
+      <section className="pb-2">
         <TikTokVideos
           username="_chirag_101"
           limit={12}
           heading="Latest TikTok Videos"
           cardsPerView={cardsPerView}
-          gap={16}
+          gap={12}
         />
       </section>
 
-      <section className="py-6">
+      <section className="pb-2">
         <InstagramVideos
           heading="Latest Instagram Reels"
           username="_jinniechiragmua"
           limit={12}
           cardsPerView={cardsPerView}
-          gap={16}
+          gap={12}
         />
       </section>
 
-      <section className="py-6">
+      <section className="pb-2">
         <YoutubeVideos
           heading="Latest YouTube Videos"
           limit={12}
           cardsPerView={cardsPerView}
-          gap={16}
+          gap={12}
         />
       </section>
     </main>

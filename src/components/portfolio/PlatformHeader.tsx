@@ -68,7 +68,7 @@ const PlatformHeader: React.FC<PlatformHeaderProps> = ({
   const isYouTube = platform === "youtube";
 
   return (
-    <div className="mb-8 flex items-start justify-between gap-4">
+    <div className="pt-5 mb-8 flex items-start justify-between gap-4">
       <div className="flex-1">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">{heading}</h2>
 

@@ -31,17 +31,17 @@ export default function MediaCardFooter({
         hasLeft ? "p-[6cqi]" : "p-[0.6em]"
       }`}
     >
-      <div className="flex items-end justify-between gap-[0.6em]">
+      <div className="flex items-end justify-between gap-[5cqi]">
         {/* LEFT */}
         {hasLeft && (
           <div className="flex-1 min-w-0 flex flex-col justify-end">
             {description && (
-              <p className="text-white font-medium leading-snug text-[0.95em] line-clamp-2 drop-shadow-lg">
+              <p className="text-white font-medium leading-snug text-[7cqi] line-clamp-2 drop-shadow-lg">
                 {description}
               </p>
             )}
             {dateText && (
-              <p className="text-white/80 text-[0.7em] drop-shadow-lg">
+              <p className="text-white/80 text-[6cqi] drop-shadow-lg">
                 {dateText}
               </p>
             )}
@@ -49,7 +49,7 @@ export default function MediaCardFooter({
         )}
 
         {/* RIGHT — ACTION RAIL */}
-        <div className="flex flex-col items-center gap-[0.5em]">
+        <div className="flex flex-col items-center gap-[6cqi]">
           {visibleActions.map((action) => (
             <button
               key={action.id}
@@ -59,18 +59,18 @@ export default function MediaCardFooter({
                 text-white
                 transition-transform
                 hover:scale-110
-                w-[9cqi]
+                w-[5cqi]
               "
             >
               {/* ATOMIC ACTION UNIT */}
               <div className="flex flex-col items-center">
                 {React.cloneElement(action.icon, {
-                  className: "w-[12cqi] h-[12cqi] drop-shadow-lg",
+                  className: "w-[11cqi] h-[11cqi] drop-shadow-lg",
                   strokeWidth: 2,
                 })}
 
                 {action.count !== undefined && (
-                  <span className="mt-[0.65em] text-[0.75em] font-semibold leading-none drop-shadow-lg">
+                  <span className="mt-[1cqi] text-[4.5cqi] font-semibold leading-none drop-shadow-lg">
                     {action.count}
                   </span>
                 )}

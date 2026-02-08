@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Heart,
@@ -16,6 +14,7 @@ import { useHorizontalSlider } from "./useHorizontalSlider";
 import { CardLayout, SliderContainer } from "./CardLayout";
 import PlatformHeader from "./PlatformHeader";
 import MediaCardFooter from "./MediaCardFooter";
+import MediaCardHeader from "./MediaCardHeader";
 
 type TikTokVideo = {
   video_id: string;
@@ -77,7 +76,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
   limit = 12,
   heading = "Latest TikTok Videos",
   cardsPerView = 3,
-  gap = 16
+  gap = 16,
 }) => {
   const [videos, setVideos] = useState<TikTokVideo[]>([]);
   const [user, setUser] = useState<TikTokUser | null>(null);
@@ -149,6 +148,8 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
 
       if (data.success && data.user && data.videos && data.videos.length > 0) {
         setUser(data.user);
+
+        console.log("TikTok avatar:", data.user.profile_picture_url);
 
         const validVideos = data.videos
           .map((video: any) => ({
@@ -306,10 +307,12 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
     );
   }
 
-  const cardWidth = `calc((100% - ${gap * (cardsPerView - 1)}px) / ${cardsPerView})`;
+  const cardWidth = `calc((100% - ${
+    gap * (cardsPerView - 1)
+  }px) / ${cardsPerView})`;
 
   return (
-    <section className="py-12 bg-gradient-to-b from-white to-gray-50">
+    <section className="pt-5 pb-0 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-[1280px] mx-auto px-4">
         {(dataSource === "mongodb_cache_locked" ||
           dataSource === "mongodb_cache_fallback") &&
@@ -344,7 +347,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
               followersCount: user.followers_count,
               followingCount: user.following_count,
               totalLikes: user.total_likes_count,
-              bio: user.bio
+              bio: user.bio,
             }}
             onPrev={handlePrev}
             onNext={handleNext}
@@ -366,6 +369,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                   key={video.video_id}
                   width={cardWidth}
                   aspectRatio="9/16"
+                  paddingY="0em"
                 >
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 w-full h-full">
                     <div className="relative w-full h-full bg-black overflow-hidden">
@@ -445,31 +449,50 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                               }}
                             >
                               <div className="w-full h-full rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border-3 border-white/60">
-                                <PlayIcon
-                                  className="text-white drop-shadow-lg w-1/2 h-1/2"
-                                />
+                                <PlayIcon className="text-white drop-shadow-lg w-1/2 h-1/2" />
                               </div>
                             </div>
                           </div>
 
-                          <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between z-10">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-pink-500 to-purple-500 p-0.5">
-                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                                  <span className="text-xs font-bold text-gray-700">
-                                    TK
-                                  </span>
+                          <MediaCardHeader
+                            logo={
+                              user?.profile_picture_url ? (
+                                <img
+                                  src={user.profile_picture_url}
+                                  alt={user.username}
+                                  className="block w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <svg
+                                    className="w-[6cqi] h-[6cqi] text-white"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4z" />
+                                  </svg>
                                 </div>
-                              </div>
-                              <span className="text-white text-sm font-semibold drop-shadow-lg">
-                                @{username}
-                              </span>
-                            </div>
-                            <MoreHorizontal
-                              className="text-white drop-shadow-lg"
-                              size={20}
-                            />
-                          </div>
+                              )
+                            }
+                            title={`@${user?.username}`}
+                            actions={[
+                              {
+                                id: "open-original",
+                                icon: <ExternalLink />,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  window.open(
+                                    `https://www.tiktok.com/@${username}/video/${video.video_id}`,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                  );
+                                },
+                              },
+                            ]}
+                            paddingCqi={5}
+                            gapCqi={2}
+                          />
 
                           <MediaCardFooter
                             description={video.description || undefined}
@@ -481,7 +504,7 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                                 count: formatNumber(video.like_count),
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                }
+                                },
                               },
                               {
                                 id: "comments",
@@ -489,34 +512,25 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
                                 count: formatNumber(video.comment_count),
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                }
+                                },
                               },
                               {
                                 id: "share",
                                 icon: <Send />,
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                }
+                                },
                               },
                               {
                                 id: "save",
                                 icon: <Bookmark />,
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                }
+                                },
                               },
                             ]}
                           />
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openTikTok(video.video_id);
-                            }}
-                            className="absolute top-2 right-2 z-20 p-1.5 bg-black/50 backdrop-blur-sm rounded-md text-white hover:bg-black/70 transition"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       )}
                     </div>
@@ -528,22 +542,26 @@ const TikTokVideos: React.FC<TikTokVideosProps> = ({
         </div>
 
         <div className="md:hidden flex justify-center gap-1 mt-6">
-          {Array.from({ length: Math.ceil(videos.length / cardsPerView) }).map((_, idx) => (
-            <div
-              key={idx}
-              className={`h-1 rounded-full transition-all ${
-                idx === Math.floor(currentIndex / cardsPerView) ? 'w-8 bg-cyan-500' : 'w-1 bg-gray-300'
-              }`}
-            />
-          ))}
+          {Array.from({ length: Math.ceil(videos.length / cardsPerView) }).map(
+            (_, idx) => (
+              <div
+                key={idx}
+                className={`h-1 rounded-full transition-all ${
+                  idx === Math.floor(currentIndex / cardsPerView)
+                    ? "w-8 bg-cyan-500"
+                    : "w-1 bg-gray-300"
+                }`}
+              />
+            )
+          )}
         </div>
 
-        <div className="md:hidden text-center mt-8">
+        <div className="md:hidden text-center my-6">
           <a
             href={`https://www.tiktok.com/@${username}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-pink-500 text-white font-semibold rounded-full hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-black via-neutral-900 to-black text-white font-semibold rounded-full hover:shadow-lg transition-all"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z" />
