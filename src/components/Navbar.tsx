@@ -122,7 +122,7 @@ const Navbar = () => {
               icon={FaYoutube}
             />
             <SocialIcon
-              href="https://www.tiktok.com/@_jinniechiragmua"
+              href="https://www.tiktok.com/@_chirag_101"
               icon={FaTiktok}
             />
           </div>
@@ -216,7 +216,7 @@ const Navbar = () => {
               icon={FaYoutube}
             />
             <SocialIcon
-              href="https://www.tiktok.com/@_jinniechiragmua"
+              href="https://www.tiktok.com/@_chirag_101"
               icon={FaTiktok}
             />
           </div>
