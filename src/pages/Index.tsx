@@ -215,7 +215,7 @@ const Index = () => {
 
               <div className="order-1 lg:order-2 flex justify-center">
                 <div className="relative">
-                  <div className="w-[220px] sm:w-[260px] md:w-[300px] lg:w-[500px] xl:w-[580px] 2xl:w-[620px] aspect-square rounded-full overflow-hidden shadow-xl">
+                  <div className="w-[300px] sm:w-[260px] md:w-[300px] lg:w-[500px] xl:w-[580px] 2xl:w-[620px] aspect-square rounded-full overflow-hidden shadow-xl">
                     <img
                       src="/photos/chiragicon1.JPG"
                       alt="Chirag Sharma - Makeup Artist"
