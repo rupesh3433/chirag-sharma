@@ -1,14 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  Instagram,
-  Facebook,
-  Youtube,
   Mail,
   Phone,
   MapPin,
   MessageSquare,
 } from "lucide-react";
+import {
+  FaInstagram,
+  FaFacebookF,
+  FaYoutube,
+  FaTiktok,
+} from "react-icons/fa6";
 
 const Footer = () => {
   return (
@@ -35,19 +38,23 @@ const Footer = () => {
             <div className="flex gap-4 mb-6">
               <SocialIcon
                 href="https://www.instagram.com/_jinniechiragmua/"
-                icon={Instagram}
+                icon={FaInstagram}
               />
               <SocialIcon
                 href="https://www.facebook.com/chirag.sharma.5477272/"
-                icon={Facebook}
+                icon={FaFacebookF}
               />
               <SocialIcon
                 href="https://www.youtube.com/@jinniechiragmua"
-                icon={Youtube}
+                icon={FaYoutube}
+              />
+              <SocialIcon
+                href="https://www.tiktok.com/@_jinniechiragmua"
+                icon={FaTiktok}
               />
             </div>
 
-            {/* Book Now (below socials — as requested) */}
+            {/* Book Now */}
             <Link
               to="/book"
               className="
