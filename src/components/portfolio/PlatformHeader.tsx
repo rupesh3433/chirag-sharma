@@ -38,10 +38,6 @@ const PlatformHeader: React.FC<PlatformHeaderProps> = ({
     return num.toString();
   };
 
-  /**
-   * ❗ Instagram and YouTube are UNTOUCHED
-   * ✅ TikTok gets a subtle black gradient
-   */
   const platformColors = {
     instagram: "from-purple-500 via-pink-500 to-orange-500",
     tiktok: "from-black via-neutral-900 to-black",

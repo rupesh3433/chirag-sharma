@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Sparkles } from "lucide-react";
-import { FaInstagram, FaFacebookF, FaYoutube } from "react-icons/fa";
+import { FaInstagram, FaFacebookF, FaYoutube, FaTiktok } from "react-icons/fa";
 
 /* ================= NAVBAR ================= */
 
@@ -121,6 +121,10 @@ const Navbar = () => {
               href="https://www.youtube.com/@jinniechiragmua"
               icon={FaYoutube}
             />
+            <SocialIcon
+              href="https://www.tiktok.com/@_jinniechiragmua"
+              icon={FaTiktok}
+            />
           </div>
 
           {/* MOBILE TOGGLE */}
@@ -210,6 +214,10 @@ const Navbar = () => {
             <SocialIcon
               href="https://www.youtube.com/@jinniechiragmua"
               icon={FaYoutube}
+            />
+            <SocialIcon
+              href="https://www.tiktok.com/@_jinniechiragmua"
+              icon={FaTiktok}
             />
           </div>
         </div>
