@@ -32,7 +32,7 @@ const FullScreenLoader = () => {
             text-foreground
           "
         >
-          Loading Application
+          
         </h2>
 
         <p
