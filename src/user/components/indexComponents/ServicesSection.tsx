@@ -115,7 +115,7 @@ const ServicesSection = () => {
                     </button>
                   </div>
 
-                  <div className="flex flex-col flex-1 px-4 pt-6 pb-4 overflow-hidden">
+                  <div className="flex flex-col flex-1 px-4 pt-6 pb-4 overflow-y-auto">
                     <h3 className="font-playfair font-semibold text-lg mb-2">
                       {service.title}
                     </h3>
