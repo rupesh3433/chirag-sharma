@@ -2,28 +2,34 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
 
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
+    "module": "ESNext",
+    "moduleResolution": "node",
+
     "jsx": "react-jsx",
 
-    /* Linting */
+    "isolatedModules": true,
+    "noEmit": true,
+
     "strict": false,
+    "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
+
+    "skipLibCheck": true,
+
+    "types": ["react", "react-dom", "leaflet"],
+    "esModuleInterop": true,
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"],
+      "@shared/*": ["src/shared/*"],
+      "@admin/*": ["src/admin/*"],
+      "@user/*": ["src/user/*"]
     }
   },
   "include": ["src"]
