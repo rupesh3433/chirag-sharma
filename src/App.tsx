@@ -8,15 +8,27 @@ const UserApp = lazy(() => import("./user/UserApp"));
 const App = () => {
   return (
     <BrowserRouter>
-      <Suspense fallback={<FullScreenLoader />}>
       <Routes>
-          {/* ADMIN APPLICATION */}
-          <Route path="/admin/*" element={<AdminApp />} />
+        {/* ADMIN */}
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <AdminApp />
+            </Suspense>
+          }
+        />
 
-          {/* USER APPLICATION */}
-          <Route path="/*" element={<UserApp />} />
-        </Routes>
-      </Suspense>
+        {/* USER */}
+        <Route
+          path="/*"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <UserApp />
+            </Suspense>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 };
