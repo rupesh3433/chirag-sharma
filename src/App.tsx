@@ -1,13 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
-import AdminApp from "./admin/AdminApp";
-import UserApp from "./user/UserApp";
 
-/**
- * Lazy-load apps to ensure:
- * - Admin code is not loaded for users
- * - User code is not loaded for admin
- */
+const AdminApp = lazy(() => import("./admin/AdminApp"));
+const UserApp = lazy(() => import("./user/UserApp"));
 
 const App = () => {
   return (
