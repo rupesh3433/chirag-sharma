@@ -3,47 +3,45 @@ import { Loader2 } from "lucide-react";
 const FullScreenLoader = () => {
   return (
     <div
-      className="
-        fixed inset-0 z-50
-        flex items-center justify-center
-        bg-background
-      "
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      className="bg-background"
     >
       <div className="flex flex-col items-center justify-center">
         {/* BIG STRONG RED CIRCLE LOADER */}
         <div
-          className="
-            flex items-center justify-center
-            h-40 w-40
-            rounded-full
-            border-8 border-red-600/20
-            border-t-red-600
-            animate-spin
-          "
+          style={{
+            height: 160,
+            width: 160,
+            borderRadius: "50%",
+            borderWidth: 8,
+            borderStyle: "solid",
+            borderColor: "rgba(220,38,38,0.2)",
+            borderTopColor: "#dc2626",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "spin 1s linear infinite",
+          }}
         >
-          <Loader2 className="h-16 w-16 text-red-600" />
+          <Loader2 size={64} color="#dc2626" />
         </div>
 
-        {/* TEXT */}
-        <h2
-          className="
-            mt-8
-            text-2xl font-bold tracking-wide
-            text-foreground
-          "
-        >
-          
-        </h2>
-
-        <p
-          className="
-            mt-2
-            text-sm
-            text-muted-foreground
-          "
-        >
+        <p className="mt-4 text-sm text-muted-foreground">
           Please wait a moment…
         </p>
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     </div>
   );
