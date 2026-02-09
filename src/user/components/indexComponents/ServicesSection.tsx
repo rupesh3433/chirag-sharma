@@ -92,8 +92,8 @@ const ServicesSection = () => {
           >
             {servicesData.map((service) => (
               <div key={service.id} className="min-w-full snap-center px-3">
-                <div className="bg-white rounded-2xl shadow-md flex flex-col h-[590px] overflow-y-auto touch-pan-y">
-                <div className="relative min-h-[320px]">
+<div className="bg-white rounded-2xl shadow-md flex flex-col h-[590px] overflow-y-auto">
+<div className="relative min-h-[320px]">
                 <img
                       src={service.image}
                       alt={service.title}
