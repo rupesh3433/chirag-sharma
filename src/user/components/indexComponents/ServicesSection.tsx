@@ -92,9 +92,9 @@ const ServicesSection = () => {
           >
             {servicesData.map((service) => (
               <div key={service.id} className="min-w-full snap-center px-3">
-                <div className="bg-white rounded-2xl shadow-md flex flex-col h-[590px] overflow-hidden">
-                  <div className="relative h-[320px] shrink-0">
-                    <img
+                <div className="bg-white rounded-2xl shadow-md flex flex-col h-[590px] overflow-y-auto touch-pan-y">
+                <div className="relative min-h-[320px]">
+                <img
                       src={service.image}
                       alt={service.title}
                       className="w-full h-full object-cover"
@@ -115,8 +115,8 @@ const ServicesSection = () => {
                     </button>
                   </div>
 
-                  <div className="flex flex-col flex-1 px-4 pt-6 pb-4 overflow-y-auto">
-                    <h3 className="font-playfair font-semibold text-lg mb-2">
+                  <div className="flex flex-col flex-1 px-4 pt-6 pb-4">
+                  <h3 className="font-playfair font-semibold text-lg mb-2">
                       {service.title}
                     </h3>
 
