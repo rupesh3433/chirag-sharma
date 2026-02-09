@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 
 import { useToast } from "@/shared/hooks/use-toast";
 import { Button } from "@shared/components/ui/button";
@@ -167,21 +167,6 @@ const LoginForm = () => {
                 </p>
               )}
             </div>
-
-            {/* Loading */}
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center py-2 space-y-2 bg-muted/50 rounded-lg px-4">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground animate-pulse font-medium">
-                    {loadingMessage}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  This may take up to a minute. Please don't close this page.
-                </p>
-              </div>
-            )}
 
             {/* Submit */}
             <Button
