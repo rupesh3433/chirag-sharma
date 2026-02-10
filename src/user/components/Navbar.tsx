@@ -39,8 +39,8 @@ const Navbar = () => {
             : "bg-white/90 backdrop-blur-sm py-4"
         }`}
       >
-        <div className="container-custom flex items-center justify-between">
-          {/* LOGO */}
+<div className="w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex items-center justify-between">
+{/* LOGO */}
           <Link to="/" className="flex items-center gap-2 group">
             <h1 className="flex items-center gap-1 text-2xl sm:text-3xl font-playfair font-bold leading-none">
               <span className="text-chirag-darkPurple">Chirag</span>

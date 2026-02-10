@@ -28,15 +28,16 @@ const MediaCardHeader: React.FC<MediaCardHeaderProps> = ({
         pointer-events-none
       "
       style={{
-        padding: `${paddingCqi}cqi`,
+        /* ↓ MOBILE-FIRST: smaller top padding */
+        padding: `clamp(8px, ${paddingCqi}cqi, 20px)`,
       }}
     >
-      {/* FULL-WIDTH FLEX — THIS IS THE CRITICAL FIX */}
+      {/* FULL-WIDTH FLEX */}
       <div className="flex items-center justify-between w-full min-w-0">
         {/* ================= LEFT ================= */}
         <div
           className="flex items-center min-w-0"
-          style={{ gap: `${gapCqi}cqi` }}
+          style={{ gap: `clamp(6px, ${gapCqi}cqi, 14px)` }}
         >
           {logo && (
             <div
@@ -49,8 +50,9 @@ const MediaCardHeader: React.FC<MediaCardHeaderProps> = ({
                 shadow-lg
               "
               style={{
-                width: "12cqi",
-                height: "12cqi",
+                /* ↓ Smaller avatar on mobile */
+                width: "clamp(28px, 10cqi, 44px)",
+                height: "clamp(28px, 10cqi, 44px)",
               }}
             >
               {logo}
@@ -66,9 +68,10 @@ const MediaCardHeader: React.FC<MediaCardHeaderProps> = ({
                 drop-shadow-lg
               "
               style={{
-                fontSize: "6cqi",
-                lineHeight: 1.1,
-                maxWidth: "60cqi",
+                /* ↓ Smaller, cleaner text on mobile */
+                fontSize: "clamp(11px, 5.2cqi, 15px)",
+                lineHeight: 1.15,
+                maxWidth: "clamp(140px, 60cqi, 260px)",
               }}
             >
               {title}
@@ -80,7 +83,7 @@ const MediaCardHeader: React.FC<MediaCardHeaderProps> = ({
         {actions.length > 0 && (
           <div
             className="flex items-center pointer-events-auto"
-            style={{ gap: `${gapCqi}cqi` }}
+            style={{ gap: `clamp(6px, ${gapCqi}cqi, 14px)` }}
           >
             {actions.map((action) => (
               <button
@@ -96,12 +99,13 @@ const MediaCardHeader: React.FC<MediaCardHeaderProps> = ({
                   transition
                 "
                 style={{
-                  width: "12cqi",
-                  height: "12cqi",
+                  /* ↓ Smaller buttons on mobile */
+                  width: "clamp(28px, 10cqi, 44px)",
+                  height: "clamp(28px, 10cqi, 44px)",
                 }}
               >
                 {React.cloneElement(action.icon, {
-                  className: "w-[8cqi] h-[8cqi]",
+                  className: "w-[clamp(14px,7cqi,20px)] h-[clamp(14px,7cqi,20px)]",
                   strokeWidth: 2,
                 })}
               </button>

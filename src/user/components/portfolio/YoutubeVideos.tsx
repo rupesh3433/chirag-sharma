@@ -257,7 +257,7 @@ const YoutubeVideos = ({
 
   return (
     <section className="pt-5 pb-0 bg-gradient-to-b from-white to-gray-50">
-      <div className="max-w-[1280px] mx-auto px-4">
+      <div className="max-w-[1280px] mx-auto px-2">
         <PlatformHeader
           platform="youtube"
           heading={heading}
