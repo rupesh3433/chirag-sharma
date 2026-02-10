@@ -1,103 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  MapPin,
-  Clock,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { EventItem } from "../../types/event";
-
-/* ================= PROPS ================= */
+import EventCard from "./EventCard";
+import { useCarouselStateMachine } from "./useCarouselStateMachine";
+import {
+  BREAKPOINTS,
+  CARD_DIMENSIONS,
+  CAROUSEL_HEIGHTS,
+  ANIMATION,
+  MOBILE_SWIPE,
+  SLOTS,
+  SPACING,
+  COLORS,
+  VERTICAL_OFFSET,
+  type ColorTheme,
+  type CarouselConfigOverrides,
+} from "./carouselConfig";
 
 interface CarousalProps {
   events: EventItem[];
   currentIndex: number;
   setIndex: (i: number) => void;
   onSelect: (event: EventItem) => void;
-  activeSection?: "current" | "upcoming" | "past";
+  activeSection?: ColorTheme;
+  configOverrides?: CarouselConfigOverrides;
 }
 
-
-/* ================= GLOBAL CONTROLS ================= */
-
-/* ==================== SHARED SETTINGS (All Layouts) ==================== */
-const AUTOPLAY_DELAY = 4500;               // Auto-rotation delay in ms
-const ROTATION_DURATION = "0.4s";          // Transition duration
-const ROTATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)"; // Smooth easing
-
-/* Card sizes - Responsive */
-const CARD_WIDTH_MOBILE = 280;
-const CARD_WIDTH_DESKTOP = 300;
-const CARD_HEIGHT_MOBILE = 400;
-const CARD_HEIGHT_DESKTOP = 500;
-
-/* ==================== DESKTOP 3D CIRCULAR CAROUSEL (5+ events) ==================== */
-
-/* 3D Ring Setup */
-const RADIUS_DESKTOP = 820;                // Radius of the circular ring
-const VISIBLE_ARC = 90;                    // Max angle to show cards (hides far cards)
-const PERSPECTIVE_DESKTOP = 3600;          // 3D perspective depth
-
-/* Front Card (Distance 0 - Center/Active) */
-const FRONT_SCALE = 1.4;                   // Size multiplier
-const FRONT_DEPTH = RADIUS_DESKTOP;        // Z-axis position
-const FRONT_Y_OFFSET = 90;                 // Vertical lift
-const FRONT_BRIGHTNESS = 1.5;              // Brightness level
-const FRONT_BLUR = 0;                      // Blur amount (px)
-
-/* Side Cards (Distance 1 - Immediate neighbors) */
-const SIDE_SCALE = 1.1;                    // Size multiplier
-const SIDE_DEPTH = 200;                    // Z-axis position (closer = larger number)
-const SIDE_HORIZONTAL_OFFSET = 380;        // Left/Right spread
-const SIDE_Y_OFFSET = 70;                  // Vertical lift
-const SIDE_ROTATION_ANGLE = 5;             // Y-axis rotation (degrees)
-const SIDE_BRIGHTNESS = 1.3;               // Brightness level
-const SIDE_BLUR = 2;                       // Blur amount (px)
-
-/* Back Cards (Distance 2 - Second neighbors) */
-const BACK_SCALE = 0.8;                    // Size multiplier
-const BACK_DEPTH = 170;                    // Z-axis position
-const BACK_HORIZONTAL_OFFSET = 450;        // Left/Right spread
-const BACK_Y_OFFSET = 40;                  // Vertical lift
-const BACK_ROTATION_ANGLE = 55;            // Y-axis rotation (degrees)
-const BACK_BRIGHTNESS = 0.6;              // Brightness level
-const BACK_BLUR = 5;                       // Blur amount (px)
-
-/* 3D Visual Effects */
-const MAX_CURVE_ANGLE = 35;                // Image curvature intensity
-const SATURATION_MIN = 0.6;                // Minimum color saturation
-
-/* ==================== DESKTOP 2D LINEAR LAYOUT (<5 events) ==================== */
-
-/* Card Scaling */
-const LINEAR_FRONT_SCALE = 1.4;            // Center/active card size
-const LINEAR_SIDE_SCALE = 1.05;             // Side cards size
-
-/* Card Positioning */
-const LINEAR_CARD_GAP = -5;               // Horizontal spacing (negative = overlap)
-const LINEAR_SIDE_Y_OFFSET = 40;           // Vertical offset for side cards (down)
-
-/* Card Visual Effects */
-const LINEAR_SIDE_OPACITY = 0.9;           // Side card transparency (0-1)
-const LINEAR_SIDE_BRIGHTNESS = 0.6;        // Side card brightness (0-2)
-const LINEAR_SIDE_BLUR = 1.5;              // Side card blur in pixels
-const LINEAR_SIDE_SATURATION = 0.85;       // Side card color saturation (0-1)
-
-/* Overlay Darkness */
-const LINEAR_FRONT_OVERLAY = "from-black/95 via-black/40 to-transparent";  // Active card
-const LINEAR_SIDE_OVERLAY = "from-black via-black/5 to-black/5";      // Side cards
-
-/* ==================== MOBILE 2D SWIPE CAROUSEL ==================== */
-const SWIPE_THRESHOLD = 50;                // Pixels needed to trigger swipe
-const MOBILE_CARD_GAP = 20;                // Spacing between cards
-
-/* ================= UTILS ================= */
-
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
-
-/* ================= CAROUSAL ================= */
+type DeviceType = "mobile" | "tablet" | "laptop" | "desktop";
 
 const Carousal: React.FC<CarousalProps> = ({
   events,
@@ -105,113 +34,191 @@ const Carousal: React.FC<CarousalProps> = ({
   setIndex,
   onSelect,
   activeSection = "current",
+  configOverrides = {},
 }) => {
   const total = events.length;
   const timerRef = useRef<number | null>(null);
   const [paused, setPaused] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // Touch/Swipe state
+  const [deviceType, setDeviceType] = useState<DeviceType>("desktop");
+
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [initialTouchCount, setInitialTouchCount] = useState(0);
 
-  /* ================= RESPONSIVE DETECTION ================= */
+  const colors = COLORS[activeSection];
+
+  const getVerticalOffset = () => {
+    const deviceOffset = configOverrides.verticalOffset?.[deviceType];
+    return deviceOffset !== undefined ? deviceOffset : VERTICAL_OFFSET[deviceType];
+  };
+
+  const getAnimationDuration = () => {
+    return configOverrides.animationDuration || ANIMATION.duration;
+  };
+
+  const getSwipeThreshold = () => {
+    return configOverrides.swipeThreshold !== undefined ? configOverrides.swipeThreshold : MOBILE_SWIPE.threshold;
+  };
+
+  const getAutoplayDelay = () => {
+    return configOverrides.autoplayDelay !== undefined ? configOverrides.autoplayDelay : ANIMATION.autoplayDelay;
+  };
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const detectDevice = () => {
+      const width = window.innerWidth;
+      if (width < BREAKPOINTS.mobile) {
+        setDeviceType("mobile");
+      } else if (width < BREAKPOINTS.tablet) {
+        setDeviceType("tablet");
+      } else if (width < BREAKPOINTS.laptop) {
+        setDeviceType("laptop");
+      } else {
+        setDeviceType("desktop");
+      }
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+
+    detectDevice();
+    window.addEventListener("resize", detectDevice);
+    return () => window.removeEventListener("resize", detectDevice);
   }, []);
 
-  /* ================= RESPONSIVE VALUES ================= */
+  const isMobile = deviceType === "mobile";
+  const isTablet = deviceType === "tablet";
+  const isDesktopOrLaptop = deviceType === "desktop" || deviceType === "laptop";
+  const machineDevice = isMobile ? "mobile" : "desktop";
 
-  const CARD_WIDTH = isMobile ? CARD_WIDTH_MOBILE : CARD_WIDTH_DESKTOP;
-  const CARD_HEIGHT = isMobile ? CARD_HEIGHT_MOBILE : CARD_HEIGHT_DESKTOP;
-
-  /* ================= AUTOPLAY ================= */
+  const { state, next, prev, goTo } = useCarouselStateMachine(
+    currentIndex,
+    total,
+    machineDevice
+  );
 
   useEffect(() => {
-    if (paused || total <= 1 || isDragging) return;
+    if (total > 0 && currentIndex >= total) {
+      setIndex(0);
+    }
+  }, [total, currentIndex, setIndex]);
+
+  useEffect(() => {
+    setIndex(state.currentIndex);
+  }, [state.currentIndex, setIndex]);
+
+  const cardDims = CARD_DIMENSIONS[deviceType];
+  const carouselHeight = CAROUSEL_HEIGHTS[deviceType];
+
+  useEffect(() => {
+    if (paused || total <= 1 || isDragging || state.phase === "TRANSITION") return;
 
     timerRef.current = setInterval(() => {
-      setIndex((currentIndex + 1) % total);
-    }, AUTOPLAY_DELAY);
+      next();
+    }, getAutoplayDelay());
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [paused, currentIndex, total, setIndex, isDragging]);
-
-  /* ================= TOUCH/SWIPE HANDLERS ================= */
+  }, [paused, state.phase, total, next, isDragging, getAutoplayDelay]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    const touches = e.touches.length;
+    setInitialTouchCount(touches);
+
+    let isValidSwipe = false;
+    
+    if (isMobile && touches === 1) {
+      isValidSwipe = true;
+    } else if (isTablet && (touches === 1 || touches === 2)) {
+      isValidSwipe = true;
+    } else if (isDesktopOrLaptop && touches === 2) {
+      isValidSwipe = true;
+    }
+
+    if (!isValidSwipe) return;
+
+    let clientX = 0;
+    if (touches === 1) {
+      clientX = e.touches[0].clientX;
+    } else {
+      clientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    }
+
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(clientX);
     setIsDragging(true);
     setPaused(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const currentTouch = e.targetTouches[0].clientX;
-    setTouchEnd(currentTouch);
-    const offset = currentTouch - touchStart;
-    setDragOffset(offset);
+    if (touchStart === null || !isDragging) return;
+
+    const touches = e.touches.length;
+    if (touches !== initialTouchCount) return;
+
+    let clientX = 0;
+    if (touches === 1) {
+      clientX = e.touches[0].clientX;
+    } else {
+      clientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    }
+
+    setTouchEnd(clientX);
+    
+    if (isMobile) {
+      setDragOffset(clientX - touchStart);
+    }
   };
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) {
       setIsDragging(false);
       setDragOffset(0);
+      setInitialTouchCount(0);
       setPaused(false);
       return;
     }
 
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > SWIPE_THRESHOLD;
-    const isRightSwipe = distance < -SWIPE_THRESHOLD;
+    const threshold = getSwipeThreshold();
+    const isLeftSwipe = distance > threshold;
+    const isRightSwipe = distance < -threshold;
 
     if (isLeftSwipe) {
-      setIndex((currentIndex + 1) % total);
+      next();
     } else if (isRightSwipe) {
-      setIndex((currentIndex - 1 + total) % total);
+      prev();
     }
 
     setTouchStart(null);
     setTouchEnd(null);
     setIsDragging(false);
     setDragOffset(0);
+    setInitialTouchCount(0);
     setPaused(false);
   };
 
-  /* ================= COLORS ================= */
+  const handleCardClick = (slotIndex: number) => {
+    const isCenter = slotIndex === 2;
+    
+    if (isCenter) {
+      const eventIndex = state.visualOrder[slotIndex];
+      onSelect(events[eventIndex]);
+    } else {
+      const eventIndexInArray = state.visualOrder[slotIndex];
+      goTo(eventIndexInArray);
+    }
+  };
 
-  const COLORS = {
-    current: {
-      glow: "#ec4899",
-      gradient: "from-pink-500 to-purple-500",
-      soft: "from-pink-500/20 to-purple-500/20",
-      light: "rgba(236, 72, 153, 0.15)",
-    },
-    upcoming: {
-      glow: "#3b82f6",
-      gradient: "from-blue-500 to-cyan-500",
-      soft: "from-blue-500/20 to-cyan-500/20",
-      light: "rgba(59, 130, 246, 0.15)",
-    },
-    past: {
-      glow: "#6b7280",
-      gradient: "from-gray-500 to-gray-600",
-      soft: "from-gray-500/20 to-gray-600/20",
-      light: "rgba(107, 114, 128, 0.15)",
-    },
-  }[activeSection];
+  const handleMobileCardClick = (eventIndex: number) => {
+    if (eventIndex === state.currentIndex) {
+      // Center card - open details
+      onSelect(events[eventIndex]);
+    } else {
+      // Side card - navigate to it
+      goTo(eventIndex);
+    }
+  };
 
   if (total === 0) {
     return (
@@ -221,424 +228,181 @@ const Carousal: React.FC<CarousalProps> = ({
     );
   }
 
-  const angleStep = 360 / total;
-  const wrap = (i: number) => (i + total) % total;
-
-  /* ================= RENDER MOBILE 2D ================= */
+  const verticalOffset = getVerticalOffset();
 
   if (isMobile) {
     return (
-      <section className="relative h-[550px] flex flex-col items-center justify-center overflow-hidden px-4 py-5">
-        {/* AMBIENT LIGHTING */}
-        <div 
+      <section
+        className="relative flex flex-col items-center justify-center overflow-hidden"
+        style={{
+          height: carouselHeight,
+          paddingLeft: SPACING.mobile.carouselPaddingX,
+          paddingRight: SPACING.mobile.carouselPaddingX,
+          paddingTop: SPACING.mobile.carouselPaddingY,
+          paddingBottom: SPACING.mobile.carouselPaddingY,
+        }}
+      >
+        <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(circle at 50% 40%, ${COLORS.light} 0%, transparent 70%)`,
-            filter: 'blur(60px)',
-            opacity: 0.5
+            background: `radial-gradient(circle at 50% 40%, ${colors.light} 0%, transparent 70%)`,
+            filter: "blur(60px)",
+            opacity: 0.5,
+            transform: `translateY(${verticalOffset}px)`,
           }}
         />
 
-        {/* CARD CONTAINER WITH SWIPE */}
-        <div 
+        <div
           className="relative w-full flex-1 flex items-center justify-center overflow-visible"
+          style={{
+            transform: `translateY(${verticalOffset}px)`,
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div 
+          <div
             className="relative flex items-center justify-center"
             style={{
-              width: CARD_WIDTH,
-              height: CARD_HEIGHT,
+              width: cardDims.width,
+              height: cardDims.height,
             }}
           >
             {events.map((event, i) => {
-              const offset = i - currentIndex;
-              const isActive = i === currentIndex;
-              const isAdjacent = Math.abs(offset) === 1;
+              const offset = i - state.currentIndex;
+              const isActive = i === state.currentIndex;
               const isVisible = Math.abs(offset) <= 1;
 
               if (!isVisible) return null;
 
-              const baseTranslateX = offset * (CARD_WIDTH + MOBILE_CARD_GAP);
+              const baseTranslateX =
+                offset * (cardDims.width + MOBILE_SWIPE.cardGap);
               const translateX = baseTranslateX + (isDragging ? dragOffset : 0);
-              const scale = isActive ? 1 : 0.85;
-              const opacity = isActive ? 1 : 0.4;
-              const zIndex = isActive ? 20 : isAdjacent ? 10 : 0;
+              const scale = isActive ? 1 : MOBILE_SWIPE.inactiveScale;
+              const opacity = isActive ? 1 : MOBILE_SWIPE.inactiveOpacity;
+              const zIndex = isActive ? 20 : 10;
+              const animationDuration = getAnimationDuration();
 
               return (
                 <div
                   key={event.id}
-                  className="absolute top-0 left-1/2"
+                  className="absolute top-0 left-1/2 cursor-pointer"
                   style={{
-                    transform: `
-                      translateX(calc(-50% + ${translateX}px))
-                      scale(${scale})
-                    `,
-                    opacity: opacity,
-                    zIndex: zIndex,
-                    transition: isDragging 
-                      ? 'none' 
-                      : `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
-                    pointerEvents: isActive ? 'auto' : 'none',
+                    transform: `translateX(calc(-50% + ${translateX}px)) scale(${scale})`,
+                    opacity,
+                    zIndex,
+                    transition: isDragging
+                      ? "none"
+                      : `all ${animationDuration} ${ANIMATION.easing}`,
+                    pointerEvents: "auto", // Enable clicks on all visible cards
                   }}
-                  onClick={() => isActive && onSelect(event)}
+                  onClick={(e) => {
+                    // Prevent click if user was dragging
+                    if (Math.abs(dragOffset) > 5) return;
+                    e.stopPropagation();
+                    handleMobileCardClick(i);
+                  }}
                 >
-                  {/* CARD */}
-                  <div
-                    className="relative rounded-2xl overflow-hidden border border-white/10"
-                    style={{
-                      width: CARD_WIDTH,
-                      height: CARD_HEIGHT,
-                      boxShadow: isActive
-                        ? `0 0 80px ${COLORS.glow}AA, 0 20px 60px rgba(0,0,0,0.6)`
-                        : `0 10px 30px rgba(0,0,0,0.5)`,
+                  <EventCard
+                    event={event}
+                    width={cardDims.width}
+                    height={cardDims.height}
+                    isActive={isActive}
+                    gradient={colors.gradient}
+                    glow={colors.glow}
+                    overlay={
+                      isActive
+                        ? "from-black/95 via-black/40 to-transparent"
+                        : "from-black/95 via-black/70 to-black/50"
+                    }
+                    boxShadow={
+                      isActive
+                        ? `0 0 80px ${colors.glow}AA, 0 20px 60px rgba(0,0,0,0.6)`
+                        : `0 10px 30px rgba(0,0,0,0.5)`
+                    }
+                    onClick={(e) => {
+                      // This onClick is for the button inside the card
+                      // Only active card has the button, so this is safe
+                      e.stopPropagation();
+                      
                     }}
-                  >
-                    {/* IMAGE */}
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage: `url(${event.poster})`,
-                      }}
-                    />
-
-                    {/* OVERLAY */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-t ${
-                        isActive
-                          ? "from-black/95 via-black/40 to-transparent"
-                          : "from-black/95 via-black/70 to-black/50"
-                      }`}
-                    />
-
-                    {/* BADGE */}
-                    {isActive && event.badge && (
-                      <div className="absolute top-4 right-4 z-10">
-                        <span
-                          className={`px-3 py-1.5 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient}`}
-                        >
-                          {event.badge}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* CONTENT */}
-                    <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                      <h3 className="text-xl font-bold mb-2 line-clamp-2">
-                        {event.title}
-                      </h3>
-
-                      <div className="space-y-1.5 text-xs text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={12} className="flex-shrink-0" /> 
-                          <span className="truncate">{event.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin size={12} className="flex-shrink-0" /> 
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                        {event.duration && (
-                          <div className="flex items-center gap-2">
-                            <Clock size={12} className="flex-shrink-0" /> 
-                            <span className="truncate">{event.duration}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {isActive && (
-                        <button
-                          className={`mt-4 w-full py-2.5 text-center text-sm font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
-                        >
-                          View Full Details
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    className="rounded-2xl"
+                    isMobile={true}
+                    style={{
+                      transition: isDragging
+                        ? "none"
+                        : `all ${animationDuration} ${ANIMATION.easing}`,
+                    }}
+                  />
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* CONTROLS AT BOTTOM */}
-        <div className="relative mt-6 mb-4 z-30 w-full max-w-sm">
+        <div
+          className="relative z-30 w-full max-w-sm"
+          style={{ 
+            marginTop: SPACING.mobile.controlsBottomOffset,
+            transform: `translateY(${verticalOffset}px)`,
+          }}
+        >
           <div className="relative">
-            {/* Glass panel background */}
             <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
-            
-            {/* Inner glow */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-            
-            {/* Control buttons */}
-            <div className="relative flex items-center justify-center gap-6 px-6 py-4">
-              {/* Left arrow */}
+
+            <div
+              className="relative flex items-center justify-center px-6 py-4"
+              style={{ gap: SPACING.mobile.controlsGap }}
+            >
               <button
-                onClick={() => setIndex(wrap(currentIndex - 1))}
+                onClick={prev}
                 className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 active:scale-95 transition-all duration-300 hover:border-white/40"
               >
-                <ChevronLeft 
-                  size={20} 
+                <ChevronLeft
+                  size={20}
                   className="group-hover:-translate-x-1 transition-transform"
                 />
               </button>
 
-              {/* Dots indicator */}
               <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
                 {events.map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => setIndex(i)}
+                    onClick={() => goTo(i)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      i === currentIndex
-                        ? `w-8 bg-gradient-to-r ${COLORS.gradient} shadow-md`
+                      i === state.currentIndex
+                        ? `w-8 bg-gradient-to-r ${colors.gradient} shadow-md`
                         : "w-2 bg-gray-500 active:bg-gray-400"
                     }`}
                   />
                 ))}
               </div>
 
-              {/* Right arrow */}
               <button
-                onClick={() => setIndex(wrap(currentIndex + 1))}
+                onClick={next}
                 className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 active:scale-95 transition-all duration-300 hover:border-white/40"
               >
-                <ChevronRight 
-                  size={20} 
+                <ChevronRight
+                  size={20}
                   className="group-hover:translate-x-1 transition-transform"
                 />
               </button>
             </div>
 
-            {/* Event counter */}
             <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
               <div className="px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300">
-                Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+                Event{" "}
+                <span className="font-bold text-white">{state.currentIndex + 1}</span>{" "}
+                of {total}
               </div>
             </div>
 
-            {/* Decorative glow */}
-            <div 
+            <div
               className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-2 blur-xl rounded-full -z-20"
               style={{
-                background: COLORS.glow,
-                opacity: 0.3
-              }}
-            />
-          </div>
-        </div>
-
-        {/* SWIPE HINT */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2">
-          <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-xs text-gray-300 animate-pulse">
-            ← Swipe to navigate →
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  /* ================= RENDER DESKTOP ================= */
-
-  // Use 2D linear layout for less than 5 events on desktop
-  const useLinearLayout = total < 5;
-
-  if (useLinearLayout) {
-    // LINEAR 2D LAYOUT - ENHANCED WITH FULL VISUAL CONTROLS
-    return (
-      <section
-        className="relative h-[900px] flex items-center justify-center overflow-hidden"
-      >
-        {/* AMBIENT LIGHTING - MATCH 3D */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `radial-gradient(circle at 50% 50%, ${COLORS.light} 0%, transparent 60%)`,
-            filter: 'blur(80px)',
-            opacity: 0.4
-          }}
-        />
-
-        {/* CARD CONTAINER */}
-        <div className="relative w-full h-full flex items-center justify-center">
-          <div 
-            className="relative flex items-center justify-center"
-            style={{
-              width: CARD_WIDTH * LINEAR_FRONT_SCALE,
-              height: CARD_HEIGHT * LINEAR_FRONT_SCALE,
-            }}
-          >
-            {events.map((event, i) => {
-              const offset = i - currentIndex;
-              const isActive = i === currentIndex;
-              const isAdjacent = Math.abs(offset) === 1;
-              const isVisible = Math.abs(offset) <= 1;
-
-              if (!isVisible) return null;
-
-              const baseTranslateX = offset * (CARD_WIDTH * LINEAR_FRONT_SCALE + LINEAR_CARD_GAP);
-              const scale = isActive ? LINEAR_FRONT_SCALE : LINEAR_SIDE_SCALE;
-              const opacity = isActive ? 1 : LINEAR_SIDE_OPACITY;
-              const zIndex = isActive ? 20 : isAdjacent ? 10 : 0;
-
-              return (
-                <div
-                  key={event.id}
-                  className="mt-3 absolute left-1/2"
-                  style={{
-                    top: isActive ? 0 : `${LINEAR_SIDE_Y_OFFSET}px`,
-                    transform: `
-                      translateX(calc(-50% + ${baseTranslateX}px))
-                      scale(${scale})
-                    `,
-                    opacity: opacity,
-                    zIndex: zIndex,
-                    transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
-                    pointerEvents: 'auto',
-                  }}
-                  onClick={() => isActive ? onSelect(event) : setIndex(i)}
-                >
-                  {/* CARD WITH ENHANCED VISUAL EFFECTS */}
-                  <div
-                    className="relative rounded-3xl overflow-hidden border border-white/10 cursor-pointer"
-                    style={{
-                      width: CARD_WIDTH,
-                      height: CARD_HEIGHT,
-                      filter: isActive 
-                        ? 'brightness(1) blur(0px) saturate(1)' 
-                        : `brightness(${LINEAR_SIDE_BRIGHTNESS}) blur(${LINEAR_SIDE_BLUR}px) saturate(${LINEAR_SIDE_SATURATION})`,
-                      boxShadow: isActive
-                        ? `0 0 180px ${COLORS.glow}AA, 0 30px 80px rgba(0,0,0,0.7)`
-                        : `0 15px 40px rgba(0,0,0,0.55)`,
-                    }}
-                  >
-                    {/* IMAGE */}
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage: `url(${event.poster})`,
-                      }}
-                    />
-
-                    {/* OVERLAY - NOW USES DIFFERENT DARKNESS FOR SIDE CARDS */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-t ${
-                        isActive ? LINEAR_FRONT_OVERLAY : LINEAR_SIDE_OVERLAY
-                      }`}
-                    />
-
-                    {/* BADGE */}
-                    {isActive && event.badge && (
-                      <div className="absolute top-5 right-5 z-10">
-                        <span
-                          className={`px-4 py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
-                        >
-                          {event.badge}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* CONTENT */}
-                    <div className="absolute bottom-0 left-0 right-0 p-7 text-white">
-                      <h3 className="text-2xl font-bold mb-3 line-clamp-2 pr-2">
-                        {event.title}
-                      </h3>
-
-                      <div className="space-y-2 text-sm text-gray-300">
-                        <div className="flex items-center gap-2 pr-2">
-                          <Calendar size={14} className="flex-shrink-0" /> 
-                          <span className="truncate">{event.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2 pr-2">
-                          <MapPin size={14} className="flex-shrink-0" /> 
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                        {event.duration && (
-                          <div className="flex items-center gap-2 pr-2">
-                            <Clock size={14} className="flex-shrink-0" /> 
-                            <span className="truncate">{event.duration}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {isActive && (
-                        <button
-                          className={`mt-5 w-full py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl hover:shadow-2xl transition-shadow`}
-                        >
-                          View Full Details
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CONTROLS - EXACT POSITION AS 3D */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30">
-          <div className="relative">
-            {/* Glass panel background */}
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
-            
-            {/* Inner glow */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-            
-            {/* Control buttons */}
-            <div className="relative flex items-center gap-8 px-10 py-6">
-              {/* Left arrow */}
-              <button
-                onClick={() => setIndex(wrap(currentIndex - 1))}
-                className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-              >
-                <ChevronLeft 
-                  size={24} 
-                  className="group-hover:-translate-x-1 transition-transform"
-                />
-              </button>
-
-              {/* Dots indicator */}
-              <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
-                {events.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setIndex(i)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      i === currentIndex
-                        ? `w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
-                        : "w-2 bg-gray-500 hover:bg-gray-400"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Right arrow */}
-              <button
-                onClick={() => setIndex(wrap(currentIndex + 1))}
-                className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
-              >
-                <ChevronRight 
-                  size={24} 
-                  className="group-hover:translate-x-1 transition-transform"
-                />
-              </button>
-            </div>
-
-            {/* Event counter */}
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-              <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
-                Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
-              </div>
-            </div>
-
-            {/* Decorative glow */}
-            <div 
-              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 blur-xl rounded-full -z-20"
-              style={{
-                background: COLORS.glow,
-                opacity: 0.3
+                background: colors.glow,
+                opacity: 0.3,
               }}
             />
           </div>
@@ -647,264 +411,212 @@ const Carousal: React.FC<CarousalProps> = ({
     );
   }
 
-  /* ================= 3D CIRCULAR CAROUSEL - WITH SEPARATE CONTROLS ================= */
   return (
     <section
-      className="relative h-[900px] flex items-center justify-center overflow-hidden"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      className="relative flex items-center justify-center direction-reverse overflow-hidden"
+      style={{ height: carouselHeight }}
     >
-      {/* AMBIENT LIGHTING */}
-      <div 
+      <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at 50% 50%, ${COLORS.light} 0%, transparent 60%)`,
-          filter: 'blur(80px)',
-          opacity: 0.4
+          background: `radial-gradient(circle at 50% 50%, ${colors.light} 0%, transparent 60%)`,
+          filter: "blur(80px)",
+          opacity: 0.4,
+          transform: `translateY(${verticalOffset}px)`,
         }}
       />
 
-      {/* CAMERA */}
-      <div
-        className="absolute inset-0"
-        style={{
-          perspective: `${PERSPECTIVE_DESKTOP}px`,
-          perspectiveOrigin: "50% 50%",
-        }}
-      />
-
-      {/* 3D RING */}
       <div
         className="relative w-full h-full flex items-center justify-center"
         style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateY(${-currentIndex * angleStep}deg)`,
-          transition: `transform ${ROTATION_DURATION} ${ROTATION_EASING}`,
-          pointerEvents: 'none',
+          perspective: "1600px",
+          perspectiveOrigin: "50% 50%",
+          transform: `translateY(${verticalOffset}px)`,
         }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {events.map((event, i) => {
-          const angle = i * angleStep;
-          const relative = ((angle - currentIndex * angleStep + 540) % 360) - 180;
-          const absAngle = Math.abs(relative);
-          
-          // VISIBLE_ARC USAGE: Hide cards beyond this angle
-          if (absAngle > VISIBLE_ARC) return null;
+        {/* ========================================== */}
+        {/* LAYER 1: VISUAL (3D) - pointer-events: none */}
+        {/* ========================================== */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transformStyle: "preserve-3d",
+            pointerEvents: "none", // CRITICAL: No clicks on 3D layer
+          }}
+        >
+          {state.visualOrder.map((eventIndex, slotIndex) => {
+            const event = events[eventIndex];
+            const slot = SLOTS[slotIndex];
+            const animationDuration = getAnimationDuration();
+            const isCenter = slotIndex === 2;
 
-          // Calculate circular distance (wrapping around the circle)
-          const rawDistance = Math.abs(i - currentIndex);
-          const circularDistance = Math.min(rawDistance, total - rawDistance);
-          
-          // Show only 5 cards: distances 0, 1, and 2
-          if (circularDistance > 2) return null;
-
-          const direction = relative > 0 ? 1 : -1;
-
-          // SEPARATE CONTROLS FOR EACH TIER
-          let tierScale, tierDepth, tierXOffset, tierYOffset, tierRotation, tierBrightness, tierBlur;
-
-          if (circularDistance === 0) {
-            // ========== FRONT CARD ==========
-            tierScale = FRONT_SCALE;
-            tierDepth = FRONT_DEPTH;
-            tierXOffset = 0;
-            tierYOffset = -FRONT_Y_OFFSET;
-            tierRotation = 0;
-            tierBrightness = FRONT_BRIGHTNESS;
-            tierBlur = FRONT_BLUR;
-          } else if (circularDistance === 1) {
-            // ========== SIDE CARDS (Distance 1) ==========
-            tierScale = SIDE_SCALE;
-            tierDepth = SIDE_DEPTH;
-            tierXOffset = SIDE_HORIZONTAL_OFFSET * direction;
-            tierYOffset = -SIDE_Y_OFFSET;
-            tierRotation = SIDE_ROTATION_ANGLE * direction;
-            tierBrightness = SIDE_BRIGHTNESS;
-            tierBlur = SIDE_BLUR;
-          } else {
-            // ========== BACK CARDS (Distance 2) ==========
-            tierScale = BACK_SCALE;
-            tierDepth = BACK_DEPTH;
-            tierXOffset = BACK_HORIZONTAL_OFFSET * direction;
-            tierYOffset = -BACK_Y_OFFSET;
-            tierRotation = BACK_ROTATION_ANGLE * direction;
-            tierBrightness = BACK_BRIGHTNESS;
-            tierBlur = BACK_BLUR;
-          }
-
-          const isActive = i === currentIndex;
-
-          // Curvature
-          const curveIntensity = (1 - (circularDistance / 2)) * MAX_CURVE_ANGLE;
-
-          return (
-            <div
-              key={event.id}
-              className="absolute cursor-pointer"
-              style={{
-                transform: `
-                  rotateY(${angle}deg)
-                  translateZ(${tierDepth}px)
-                  translateX(${tierXOffset}px)
-                  translateY(${tierYOffset}px)
-                  rotateY(${tierRotation}deg)
-                `,
-                transformStyle: "preserve-3d",
-                pointerEvents: 'auto',
-              }}
-              onClick={() => isActive ? onSelect(event) : setIndex(i)}
-            >
-              {/* CARD */}
+            return (
               <div
-                className="relative rounded-3xl overflow-hidden border border-white/10"
+                key={`visual-${event.id}`}
+                className="absolute top-1/2 left-1/2"
                 style={{
-                  width: CARD_WIDTH,
-                  height: CARD_HEIGHT,
-                  transform: `scale(${tierScale})`,
-                  filter: `
-                    brightness(${tierBrightness})
-                    blur(${tierBlur}px)
-                    saturate(${SATURATION_MIN + (1 - circularDistance * 0.2)})
+                  transform: `
+                    translate(-50%, -50%)
+                    translateX(${slot.position.x}px)
+                    translateY(${slot.position.y}px)
+                    translateZ(${slot.position.z}px)
+                    rotateY(${slot.rotateY}deg)
+                    scale(${slot.scale})
                   `,
-                  boxShadow: isActive
-                    ? `0 0 180px ${COLORS.glow}AA, 0 30px 80px rgba(0,0,0,0.7)`
-                    : circularDistance === 1
-                    ? `0 0 60px ${COLORS.glow}66, 0 15px 40px rgba(0,0,0,0.55)`
-                    : `0 5px 20px rgba(0,0,0,0.4)`,
-                  transition: `all ${ROTATION_DURATION} ${ROTATION_EASING}`,
+                  transformStyle: "preserve-3d",
+                  zIndex: slot.zIndex,
+                  opacity: slot.opacity,
+                  pointerEvents: "none", // No interaction
+                  transition: `all ${animationDuration} ${ANIMATION.easing}`,
+                  willChange: "transform, opacity",
                 }}
               >
-                {/* IMAGE WITH SUBTLE CURVE */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `url(${event.poster})`,
-                    transform: `rotateY(${curveIntensity * direction * 0.1}deg)`,
-                  }}
+                <EventCard
+                  event={event}
+                  width={cardDims.width}
+                  height={cardDims.height}
+                  isActive={isCenter}
+                  gradient={colors.gradient}
+                  glow={colors.glow}
+                  brightness={slot.brightness}
+                  blur={slot.blur}
+                  saturation={0.7 + slotIndex * 0.075}
+                  boxShadow={
+                    slotIndex === 2
+                      ? `0 0 180px ${colors.glow}CC, 0 45px 100px rgba(0,0,0,0.85)`
+                      : slotIndex === 1 || slotIndex === 3
+                      ? `0 0 80px ${colors.glow}70, 0 22px 55px rgba(0,0,0,0.7)`
+                      : `0 14px 40px rgba(0,0,0,0.55)`
+                  }
+                  onClick={() => {}} // No-op
+                  isMobile={false}
                 />
-
-                {/* EDGE SHADING */}
-                <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-transparent to-black/40" />
-
-                {/* OVERLAY */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-t ${
-                    isActive
-                      ? "from-black/95 via-black/40 to-transparent"
-                      : "from-black/95 via-black/80 to-black/60"
-                  }`}
-                />
-
-                {/* BADGE */}
-                {isActive && event.badge && (
-                  <div className="absolute top-5 right-5 z-10">
-                    <span
-                      className={`px-4 py-2 text-xs font-bold text-white rounded-full bg-gradient-to-r ${COLORS.gradient} shadow-lg`}
-                    >
-                      {event.badge}
-                    </span>
-                  </div>
-                )}
-
-                {/* CONTENT - FIXED OVERFLOW */}
-                <div className="absolute bottom-0 left-0 right-0 p-7 text-white">
-                  <h3 className="text-2xl font-bold mb-3 line-clamp-2 pr-2">
-                    {event.title}
-                  </h3>
-
-                  <div className="space-y-2 text-sm text-gray-300">
-                    <div className="flex items-center gap-2 pr-2">
-                      <Calendar size={14} className="flex-shrink-0" /> 
-                      <span className="truncate">{event.date}</span>
-                    </div>
-                    <div className="flex items-center gap-2 pr-2">
-                      <MapPin size={14} className="flex-shrink-0" /> 
-                      <span className="truncate">{event.location}</span>
-                    </div>
-                    {event.duration && (
-                      <div className="flex items-center gap-2 pr-2">
-                        <Clock size={14} className="flex-shrink-0" /> 
-                        <span className="truncate">{event.duration}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {isActive && (
-                    <button
-                      className={`mt-5 w-full py-3 text-center text-base font-bold rounded-xl bg-gradient-to-r ${COLORS.gradient} shadow-xl hover:shadow-2xl transition-shadow`}
-                    >
-                      View Full Details
-                    </button>
-                  )}
-                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* ========================================== */}
+        {/* LAYER 2: INTERACTION (FLAT) - handles ALL clicks */}
+        {/* ========================================== */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: "100%",
+            height: cardDims.height,
+            pointerEvents: "none", // Container is non-interactive
+          }}
+        >
+          {state.visualOrder.map((eventIndex, slotIndex) => {
+            const event = events[eventIndex];
+            const slot = SLOTS[slotIndex];
+            const animationDuration = getAnimationDuration();
+            const isCenter = slotIndex === 2;
+
+            // Calculate scaled dimensions for hit area
+            const hitWidth = cardDims.width * slot.scale;
+            const hitHeight = cardDims.height * slot.scale;
+
+            return (
+              <div
+                key={`interaction-${event.id}`}
+                className="absolute top-1/2 left-1/2 cursor-pointer"
+                style={{
+                  transform: `
+                    translate(-50%, -50%)
+                    translateX(${slot.flatX}px)
+                  `, // FLAT: only translateX
+                  width: hitWidth,
+                  height: hitHeight,
+                  zIndex: 100 + slot.zIndex, // Above visual layer
+                  pointerEvents: "auto", // CRITICAL: Handles clicks
+                  transition: `all ${animationDuration} ${ANIMATION.easing}`,
+                  // DEBUG: Uncomment to see hit areas
+                  // background: isCenter ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.3)',
+                  // border: '2px solid yellow',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCardClick(slotIndex);
+                }}
+                title={isCenter ? "Click to view details" : "Click to navigate"}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* CONTROLS AT BOTTOM */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40">
+      <div
+        className="absolute"
+        style={{ 
+          bottom: SPACING.desktop.controlsBottomOffset,
+          transform: `translateY(${verticalOffset}px)`,
+        }}
+      >
         <div className="relative">
-          {/* Glass panel background */}
           <div className="absolute inset-0 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl -z-10" />
-          
-          {/* Inner glow */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-          
-          {/* Control buttons */}
-          <div className="relative flex items-center gap-8 px-10 py-6">
-            {/* Left arrow */}
+
+          <div
+            className="relative flex items-center px-8 py-5"
+            style={{ gap: SPACING.desktop.controlsGap }}
+          >
             <button
-              onClick={() => setIndex(wrap(currentIndex - 1))}
-              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+              onClick={prev}
+              disabled={state.phase === "TRANSITION"}
+              className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft 
-                size={24} 
+              <ChevronLeft
+                size={22}
                 className="group-hover:-translate-x-1 transition-transform"
               />
             </button>
 
-            {/* Dots indicator */}
-            <div className="flex items-center gap-6 px-6 py-3 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center gap-5 px-5 py-2.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
               {events.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setIndex(i)}
+                  onClick={() => goTo(i)}
+                  disabled={state.phase === "TRANSITION"}
                   className={`h-2 rounded-full transition-all duration-300 ${
-                    i === currentIndex
-                      ? `w-10 bg-gradient-to-r ${COLORS.gradient} shadow-md shadow-black/30`
+                    i === state.currentIndex
+                      ? `w-9 bg-gradient-to-r ${colors.gradient} shadow-md shadow-black/30`
                       : "w-2 bg-gray-500 hover:bg-gray-400"
                   }`}
                 />
               ))}
             </div>
 
-            {/* Right arrow */}
             <button
-              onClick={() => setIndex(wrap(currentIndex + 1))}
-              className="group p-4 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30"
+              onClick={next}
+              disabled={state.phase === "TRANSITION"}
+              className="group p-3 rounded-full bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-white hover:scale-110 transition-all duration-300 hover:border-white/40 hover:shadow-lg hover:shadow-black/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight 
-                size={24} 
+              <ChevronRight
+                size={22}
                 className="group-hover:translate-x-1 transition-transform"
               />
             </button>
           </div>
 
-          {/* Event counter */}
-          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-            <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
-              Event <span className="font-bold text-white">{currentIndex + 1}</span> of {total}
+          <div className="absolute -bottom-9 left-1/2 -translate-x-1/2">
+            <div className="px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-sm text-gray-300">
+              Event{" "}
+              <span className="font-bold text-white">{state.currentIndex + 1}</span> of{" "}
+              {total}
             </div>
           </div>
 
-          {/* Decorative glow */}
-          <div 
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 blur-xl rounded-full -z-20"
+          <div
+            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-3/4 h-3 blur-xl rounded-full -z-20"
             style={{
-              background: COLORS.glow,
-              opacity: 0.3
+              background: colors.glow,
+              opacity: 0.3,
             }}
           />
         </div>

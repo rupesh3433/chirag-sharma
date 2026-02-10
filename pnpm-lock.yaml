@@ -134,6 +134,9 @@ importers:
       react:
         specifier: ^18.0.0
         version: 18.3.1
+      react-carousel3:
+        specifier: ^1.0.0
+        version: 1.0.0
       react-day-picker:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@18.3.1)
@@ -2801,6 +2804,9 @@ packages:
 
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
+
+  react-carousel3@1.0.0:
+    resolution: {integrity: sha512-O2N7COshvl6zFkwcmQ4CGzAaVY7vExDjCuTXLYUyemZTPfViw+fUq0u89L4Q3DUbsBW1z4CdtjsyXHwD0Twbfg==}
 
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
@@ -5759,6 +5765,10 @@ snapshots:
   punycode@2.3.1: {}
 
   queue-microtask@1.2.3: {}
+
+  react-carousel3@1.0.0:
+    dependencies:
+      react: 18.3.1
 
   react-day-picker@8.10.1(date-fns@3.6.0)(react@18.3.1):
     dependencies:

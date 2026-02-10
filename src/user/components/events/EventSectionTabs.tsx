@@ -1,5 +1,4 @@
 import React from "react";
-import { Calendar, Award, TrendingUp } from "lucide-react";
 import type { EventItem } from "@/user/types/event";
 
 /* ================= TYPES ================= */
@@ -34,9 +33,16 @@ const EventSectionTabs: React.FC<EventSectionTabsProps> = ({
   const sections: SectionType[] = ["current", "upcoming", "past"];
 
   return (
-    <section className="flex justify-center px-4 mb-8 sm:mb-12 md:mb-14">
+    <section
+      className="
+        flex justify-center px-4
+        mb-4 sm:mb-12
+        md:mb-0
+        lg:mb-0
+      "
+    >
       <div className="flex flex-col sm:flex-row w-full max-w-2xl gap-3">
-        {/* ================= MOBILE TABS ================= */}
+        {/* ================= MOBILE TABS (UNCHANGED) ================= */}
         <div className="flex sm:hidden w-full bg-gray-900/40 backdrop-blur-sm rounded-2xl p-1 overflow-x-auto no-scrollbar">
           {sections.map((section) => {
             const sectionStats = getSectionStats(allEvents, section);
@@ -57,8 +63,16 @@ const EventSectionTabs: React.FC<EventSectionTabsProps> = ({
           })}
         </div>
 
-        {/* ================= DESKTOP / TABLET TABS ================= */}
-        <div className="hidden sm:flex w-full bg-gray-900/40 backdrop-blur-sm rounded-2xl p-1.5 border border-white/5">
+        {/* ================= TABLET / DESKTOP ================= */}
+        <div
+          className="
+            hidden sm:flex w-full
+            bg-gray-900/40 backdrop-blur-sm
+            rounded-xl
+            p-1
+            border border-white/5
+          "
+        >
           {sections.map((section) => {
             const sectionStats = getSectionStats(allEvents, section);
 
@@ -66,11 +80,21 @@ const EventSectionTabs: React.FC<EventSectionTabsProps> = ({
               <button
                 key={section}
                 onClick={() => setActiveSection(section)}
-                className={`flex-1 py-3 sm:py-4 text-sm sm:text-base font-bold rounded-xl transition-all duration-300 ${
-                  activeSection === section
-                    ? `bg-gradient-to-r ${sectionStats.color} text-white shadow-xl`
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
+                className={`
+                  flex-1
+                  py-2.5
+                  md:py-2
+                  text-sm
+                  md:text-xs
+                  font-semibold
+                  rounded-lg
+                  transition-all duration-300
+                  ${
+                    activeSection === section
+                      ? `bg-gradient-to-r ${sectionStats.color} text-white shadow-md scale-[1.03]`
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }
+                `}
               >
                 {section.charAt(0).toUpperCase() + section.slice(1)}
               </button>

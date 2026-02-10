@@ -1,28 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Footer from "../components/Footer";
 import Carousal from "../components/events/Carousal";
 import Navbar from "../components/Navbar";
-import {
-  Sparkles,
-  Calendar,
-  MapPin,
-  Users,
-  Clock,
-  X,
-  Share2,
-  Heart,
-  Star,
-  TrendingUp,
-  Award,
-  ChevronDown,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-  Tag,
-  Ticket,
-} from "lucide-react";
+import { Calendar, ChevronDown, TrendingUp, Award } from "lucide-react";
 import type { EventItem } from "../types/event";
 import EventsHeroSection from "../components/events/EventsHeroSection";
 import EventDetailModal from "../components/events/EventDetailModal";
@@ -187,7 +168,6 @@ const EventsPage: React.FC = () => {
     data: allEvents = [],
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ["events"],
     queryFn: fetchEvents,
@@ -197,26 +177,26 @@ const EventsPage: React.FC = () => {
 
   const events = allEvents.filter((e) => e.category === activeSection);
   const currentIndex = indexMap[activeSection];
-  const stats = getSectionStats(allEvents, activeSection);
 
-  const setIndex = (i: number) =>
-    setIndexMap((prev) => ({
-      ...prev,
-      [activeSection]: i,
-    }));
-
+  // Reset index when events change (tab switching)
   useEffect(() => {
-    if (allEvents.length > 0 && events.length === 0) {
-      const sections: SectionType[] = ["current", "upcoming", "past"];
-      for (const section of sections) {
-        const sectionEvents = allEvents.filter((e) => e.category === section);
-        if (sectionEvents.length > 0) {
-          setActiveSection(section);
-          break;
-        }
-      }
+    if (events.length > 0 && currentIndex >= events.length) {
+      setIndexMap((prev) => ({
+        ...prev,
+        [activeSection]: 0,
+      }));
     }
-  }, [allEvents, events.length]);
+  }, [events, currentIndex, activeSection]);
+
+  const setIndex = useCallback(
+    (i: number) => {
+      setIndexMap((prev) => ({
+        ...prev,
+        [activeSection]: i,
+      }));
+    },
+    [activeSection]
+  );
 
   useEffect(() => {
     const handleScroll = () => setShowScrollHint(false);
@@ -247,7 +227,7 @@ const EventsPage: React.FC = () => {
     <div className="w-full min-w-0 overflow-x-hidden">
       <Navbar />
 
-      <main className="w-full min-w-0 pt-20 sm:pt-24 pb-5 min-h-screen bg-gradient-to-b from-gray-950 via-purple-950/10 to-gray-950">
+      <main className="w-full min-w-0 pt-16 sm:pt-20 pb-6 min-h-screen bg-gradient-to-b from-gray-950 via-purple-950/10 to-gray-950">
         <div className="w-full min-w-0 max-w-[100vw]">
           <EventsHeroSection
             isLoading={isLoading}
@@ -260,67 +240,90 @@ const EventsPage: React.FC = () => {
         </div>
 
         {!isLoading && !isError && allEvents.length > 0 && (
-          <div className="w-full min-w-0 max-w-[100vw]">
+          <div className="w-full min-w-0 max-w-[100vw] mt-4 sm:mt-6">
             <EventSectionTabs
               allEvents={allEvents}
               activeSection={activeSection}
-              setActiveSection={setActiveSection}
+              setActiveSection={(section) => {
+                setActiveSection(section);
+              }}
               getSectionStats={getSectionStats}
             />
           </div>
         )}
 
         {!isLoading && !isError && events.length > 0 && (
-          <section className="w-full min-w-0 max-w-[100vw]">
-            <div className="w-full min-w-0 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              <div className="w-full min-w-0">
-                <Carousal
-                  events={events}
-                  currentIndex={currentIndex}
-                  setIndex={setIndex}
-                  onSelect={setSelectedEvent}
-                  activeSection={activeSection}
-                />
-              </div>
+          <section className="w-full min-w-0 max-w-[100vw] mt-2 sm:mt-4">
+            <div className="w-full min-w-0">
+              <Carousal
+                key={activeSection}
+                events={events}
+                currentIndex={currentIndex}
+                setIndex={setIndex}
+                onSelect={setSelectedEvent}
+                activeSection={activeSection}
+              />
             </div>
           </section>
         )}
 
-        {!isLoading &&
-          !isError &&
-          allEvents.length > 0 &&
-          events.length === 0 && (
-            <div className="w-full min-w-0 max-w-[100vw] flex flex-col items-center gap-4 px-4 sm:px-6 py-16">
-              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="text-gray-500" size={24} />
-              </div>
-              <div className="w-full min-w-0 text-center max-w-md mx-auto px-4">
-                <h3 className="text-base sm:text-lg font-bold text-white mb-2 break-words">
-                  No{" "}
-                  {activeSection.charAt(0).toUpperCase() +
-                    activeSection.slice(1)}{" "}
-                  Events
-                </h3>
-                <p className="text-gray-400 text-sm break-words">
-                  {activeSection === "current" &&
-                    "There are no live events happening right now. Check upcoming events for what's coming soon!"}
-                  {activeSection === "upcoming" &&
-                    "No events scheduled for the future yet. Stay tuned for exciting announcements!"}
-                  {activeSection === "past" &&
-                    "No completed events to show. Check out our current and upcoming events!"}
-                </p>
-              </div>
-            </div>
-          )}
+{!isLoading && !isError && events.length === 0 && (
+  <div className="w-full min-w-0 max-w-[100vw] flex justify-center px-4 sm:px-6 py-12 sm:py-16 mt-2 sm:mt-4">
+    <div
+      className={`w-full max-w-xl rounded-xl border p-6 sm:p-8
+        ${
+          activeSection === "current" &&
+          "bg-pink-600/20 border-pink-500/40"
+        }
+        ${
+          activeSection === "upcoming" &&
+          "bg-blue-600/20 border-blue-500/40"
+        }
+        ${
+          activeSection === "past" &&
+          "bg-gray-600/20 border-gray-500/40"
+        }
+      `}
+    >
+      <div className="flex flex-col items-center text-center gap-4">
+        <div
+          className={`w-14 h-14 rounded-full flex items-center justify-center border
+            ${
+              activeSection === "current" &&
+              "bg-pink-500/30 border-pink-400/50"
+            }
+            ${
+              activeSection === "upcoming" &&
+              "bg-blue-500/30 border-blue-400/50"
+            }
+            ${
+              activeSection === "past" &&
+              "bg-gray-500/30 border-gray-400/50"
+            }
+          `}
+        >
+          <Calendar className="text-white" size={20} />
+        </div>
 
-        {!isLoading && !isError && events.length > 0 && showScrollHint && (
-          <div className="w-full min-w-0 max-w-[100vw] sm:hidden flex justify-center mt-8 animate-bounce px-4">
-            <div className="flex flex-col items-center gap-2 text-gray-500">
-              <span className="text-xs">Scroll for more</span>
-              <ChevronDown size={20} className="flex-shrink-0" />
-            </div>
-          </div>
-        )}
+        <h3 className="text-lg sm:text-xl font-semibold text-white">
+          {activeSection === "current" && "No Current Events"}
+          {activeSection === "upcoming" && "No Upcoming Events"}
+          {activeSection === "past" && "No Past Events"}
+        </h3>
+
+        <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-md">
+          {activeSection === "current" &&
+            "There are no live events at the moment. Please check the upcoming section."}
+          {activeSection === "upcoming" &&
+            "No events are scheduled yet. New events will appear here once announced."}
+          {activeSection === "past" &&
+            "There are no completed events to display at this time."}
+        </p>
+      </div>
+    </div>
+  </div>
+)}
+
       </main>
 
       {selectedEvent && (
