@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -14,11 +14,9 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
-/* -------------------- DATA -------------------- */
-
 const SERVICES: Record<string, string[]> = {
   "Bridal Makeup Services": [
-    "Chirag’s Signature Bridal Makeup",
+    "Chirag's Signature Bridal Makeup",
     "Luxury Bridal Makeup (HD / Brush)",
     "Reception / Engagement / Cocktail Makeup",
   ],
@@ -46,8 +44,22 @@ const COUNTRY_CODES: Record<string, string> = {
   Dubai: "+971",
 };
 
+type FormState = {
+  service: string;
+  package: string;
+  name: string;
+  email: string;
+  phone_country: string;
+  phone_number: string;
+  service_country: string;
+  address: string;
+  pincode: string;
+  date: string;
+  message: string;
+};
+
 export default function BookPage() {
-  const emptyForm = {
+  const emptyForm: FormState = {
     service: "",
     package: "",
     name: "",
@@ -61,7 +73,7 @@ export default function BookPage() {
     message: "",
   };
 
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState<FormState>(emptyForm);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
@@ -71,9 +83,11 @@ export default function BookPage() {
   const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  /* -------------------- HANDLERS -------------------- */
+  const otpInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleChange = (e: any) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((p) => ({
       ...p,
@@ -85,7 +99,7 @@ export default function BookPage() {
   const fullPhone =
     COUNTRY_CODES[formData.phone_country] + formData.phone_number;
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setOtpError("");
@@ -142,7 +156,10 @@ export default function BookPage() {
     setOtpError("Booking request was not completed.");
   };
 
-  /* -------------------- RESEND TIMER -------------------- */
+  useEffect(() => {
+    if (!showOtpModal) return;
+    otpInputRef.current?.focus();
+  }, [showOtpModal]);
 
   useEffect(() => {
     if (!showOtpModal || canResend) return;
@@ -184,53 +201,49 @@ export default function BookPage() {
     }
   };
 
-  /* -------------------- UI -------------------- */
-
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-grow">
-        {/* HERO — INDEX ALIGNED */}
-        <section className="pt-28 pb-5 bg-white">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-full bg-gradient-to-br from-chirag-pink to-pink-200 border border-chirag-pink/40 shadow-lg">
-                         <Sparkles className="w-10 h-10 text-chirag-darkPurple" />
-                       </div>
+      <main className="flex-grow w-full">
+        <section className="pt-[min(20vh,5rem)] pb-4 bg-white">
+          <div className="max-w-screen-md mx-auto px-[clamp(0.75rem,4vw,1.25rem)] text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-chirag-pink to-pink-200 border border-chirag-pink/40 shadow-lg">
+              <Sparkles className="h-7 w-7 text-chirag-darkPurple" />
+            </div>
 
-            <h1 className="text-4xl sm:text-5xl font-playfair font-bold mb-6">
+            <h1 className="text-[clamp(1.5rem,4vw,2.5rem)] font-playfair font-bold leading-tight">
               Book Your <span className="header-gradient">Service</span>
             </h1>
 
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
-              Fill in the details below to confirm your personalized makeup
-              experience with Chirag Sharma.
+            <p className="mt-2 text-[clamp(0.75rem,2.5vw,1rem)] text-gray-600 max-w-prose mx-auto">
+              Fill in the details below to confirm your personalized makeup experience.
             </p>
           </div>
         </section>
 
-        {/* FORM */}
-        <section className="pb-24 bg-gradient-to-b from-white to-chirag-pink/10">
-          <div className="max-w-4xl mx-auto px-4">
+        <section className="pb-12 bg-gradient-to-b from-white to-chirag-pink/10">
+          <div className="max-w-screen-md mx-auto px-[clamp(0.75rem,4vw,1.25rem)]">
             {showSuccess && (
-              <div className="mb-6 rounded-xl bg-green-100 border border-green-300 px-6 py-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-green-800 font-semibold">
-                  <CheckCircle2 /> Booking confirmed successfully!
+              <div className="mb-4 rounded-xl bg-green-100 border border-green-300 px-4 py-3 text-center">
+                <div className="flex items-center justify-center gap-2 text-green-800 font-semibold text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Booking confirmed!
                 </div>
               </div>
             )}
 
             <form
               onSubmit={handleSubmit}
-              className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl space-y-8"
+              className="bg-white rounded-2xl shadow-xl p-[clamp(0.75rem,3vw,1.5rem)] space-y-4"
             >
-              {/* SERVICE */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <SelectField
                   label="Service"
                   name="service"
                   value={formData.service}
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Select Service</option>
                   {Object.keys(SERVICES).map((s) => (
@@ -243,6 +256,7 @@ export default function BookPage() {
                   name="package"
                   value={formData.package}
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Select Package</option>
                   {formData.service &&
@@ -252,33 +266,33 @@ export default function BookPage() {
                 </SelectField>
               </div>
 
-              {/* PERSONAL */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <InputField
                   label="Full Name"
                   name="name"
-                  icon={<User />}
+                  icon={<User className="h-4 w-4" />}
                   value={formData.name}
                   onChange={handleChange}
+                  required
                 />
                 <InputField
                   label="Email"
                   name="email"
                   type="email"
-                  icon={<Mail />}
+                  icon={<Mail className="h-4 w-4" />}
                   value={formData.email}
                   onChange={handleChange}
+                  required
                 />
               </div>
 
-              {/* PHONE */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold mb-2">
-                  <Phone /> Phone Number
+              <div className="flex flex-col gap-1">
+                <label className="flex items-center gap-1 text-xs font-semibold">
+                  <Phone className="h-4 w-4" /> Phone
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-3">
+                <div className="grid grid-cols-[minmax(4.5rem,6rem)_1fr] gap-2">
                   <select
-                    className="border rounded-xl px-3 py-3"
+                    className="min-h-[2.75rem] w-full rounded-lg border px-2 text-sm focus:border-chirag-pink focus:outline-none"
                     value={formData.phone_country}
                     onChange={(e) =>
                       setFormData((p) => ({
@@ -286,16 +300,17 @@ export default function BookPage() {
                         phone_country: e.target.value,
                       }))
                     }
+                    required
                   >
                     {Object.keys(COUNTRY_CODES).map((c) => (
                       <option key={c} value={c}>
-                        {COUNTRY_CODES[c]} {c}
+                        {COUNTRY_CODES[c]}
                       </option>
                     ))}
                   </select>
 
                   <input
-                    className="border rounded-xl px-4 py-3"
+                    className="min-h-[2.75rem] w-full rounded-lg border px-3 text-sm focus:border-chirag-pink focus:outline-none"
                     value={formData.phone_number}
                     onChange={(e) =>
                       setFormData((p) => ({
@@ -303,20 +318,22 @@ export default function BookPage() {
                         phone_number: e.target.value.replace(/\D/g, ""),
                       }))
                     }
+                    inputMode="numeric"
                     placeholder="Mobile number"
+                    required
                   />
                 </div>
               </div>
 
-              {/* LOCATION */}
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <SelectField
-                  label="Service Country"
+                  label="Country"
                   name="service_country"
                   value={formData.service_country}
                   onChange={handleChange}
+                  required
                 >
-                  <option value="">Select Country</option>
+                  <option value="">Select</option>
                   {COUNTRIES.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
@@ -325,36 +342,45 @@ export default function BookPage() {
                 <InputField
                   label="Pincode"
                   name="pincode"
-                  icon={<MapPin />}
+                  icon={<MapPin className="h-4 w-4" />}
                   value={formData.pincode}
                   onChange={handleChange}
+                  required
                 />
+
                 <InputField
                   label="Address"
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
+                  required
                 />
               </div>
 
               <InputField
-                label="Preferred Date"
+                label="Date"
                 name="date"
                 type="date"
-                icon={<Calendar />}
+                icon={<Calendar className="h-4 w-4" />}
                 value={formData.date}
                 onChange={handleChange}
+                required
               />
 
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                placeholder="Additional notes"
-                className="w-full border rounded-xl p-4 min-h-[120px]"
-              />
+              <div className="flex flex-col">
+                <label className="text-xs font-semibold mb-1">Notes (Optional)</label>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  className="min-h-[5rem] w-full rounded-lg border px-3 py-2 text-sm resize-none focus:border-chirag-pink focus:outline-none"
+                />
+              </div>
 
-              <button disabled={loading} className="w-full button-primary py-4">
+              <button
+                disabled={loading}
+                className="min-h-[3rem] w-full rounded-lg font-semibold text-sm button-primary disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 {loading ? "Sending OTP..." : "Request Booking"}
               </button>
             </form>
@@ -364,28 +390,34 @@ export default function BookPage() {
 
       <Footer />
 
-      {/* OTP MODAL */}
       {showOtpModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-80 relative">
-            <button onClick={closeOtpModal} className="absolute top-3 right-3">
-              <X />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+            <button
+              onClick={closeOtpModal}
+              className="absolute right-3 top-3 rounded-lg p-1 hover:bg-gray-100"
+            >
+              <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-semibold mb-4 text-center">Enter OTP</h3>
+            <h3 className="mb-4 text-center text-lg font-semibold">
+              Enter OTP
+            </h3>
 
             <input
-              className="w-full border p-3 rounded mb-2 text-center tracking-widest"
+              ref={otpInputRef}
+              className="mb-2 w-full rounded-lg border-2 px-3 py-3 text-center text-xl font-semibold tracking-widest focus:border-chirag-pink focus:outline-none"
               value={otp}
               onChange={(e) => {
                 setOtp(e.target.value.replace(/\D/g, ""));
                 setOtpError("");
               }}
               maxLength={6}
+              inputMode="numeric"
             />
 
             {otpError && (
-              <p className="text-red-500 text-sm text-center mb-2">
+              <p className="mb-2 text-center text-xs text-red-500">
                 {otpError}
               </p>
             )}
@@ -393,25 +425,25 @@ export default function BookPage() {
             <button
               onClick={verifyOtp}
               disabled={otp.length !== 6}
-              className={`w-full py-2 rounded font-semibold ${
+              className={`min-h-[3rem] w-full rounded-lg font-semibold text-sm ${
                 otp.length !== 6
-                  ? "bg-gray-300 cursor-not-allowed"
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "button-primary"
               }`}
             >
               Verify OTP
             </button>
 
-            <div className="text-center mt-4 text-sm text-gray-600">
+            <div className="mt-3 text-center text-xs text-gray-600">
               {canResend ? (
                 <button
                   onClick={resendOtp}
-                  className="text-chirag-pink font-semibold"
+                  className="font-semibold text-chirag-pink hover:underline"
                 >
                   Resend OTP
                 </button>
               ) : (
-                <>Resend OTP in {resendTimer}s</>
+                <>Resend in {resendTimer}s</>
               )}
             </div>
           </div>
@@ -421,22 +453,42 @@ export default function BookPage() {
   );
 }
 
-/* -------------------- COMPONENTS -------------------- */
-
-const InputField = ({ label, icon, ...props }: any) => (
-  <div className="flex flex-col">
-    <label className="flex items-center gap-2 text-sm font-semibold mb-2 min-h-[24px]">
+const InputField = ({
+  label,
+  icon,
+  ...props
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  [key: string]: any;
+}) => (
+  <div className="flex flex-col gap-1">
+    <label className="flex items-center gap-1 text-xs font-semibold">
       {icon && <span className="flex-shrink-0">{icon}</span>}
       {label}
     </label>
-    <input {...props} className="w-full border rounded-xl px-4 py-3" />
+    <input
+      {...props}
+      className="min-h-[2.75rem] w-full rounded-lg border px-3 text-sm focus:border-chirag-pink focus:outline-none"
+    />
   </div>
 );
 
-const SelectField = ({ label, children, ...props }: any) => (
-  <div className="flex flex-col">
-    <label className="text-sm font-semibold mb-2 min-h-[24px]">{label}</label>
-    <select {...props} className="w-full border rounded-xl px-4 py-3">
+const SelectField = ({
+  label,
+  children,
+  ...props
+}: {
+  label: string;
+  children: React.ReactNode;
+  [key: string]: any;
+}) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-semibold">{label}</label>
+    <select
+      {...props}
+      className="min-h-[2.75rem] w-full rounded-lg border px-3 text-sm focus:border-chirag-pink focus:outline-none"
+    >
       {children}
     </select>
   </div>

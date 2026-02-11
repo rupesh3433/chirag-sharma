@@ -1,249 +1,471 @@
-import React from "react";
+import React, { useRef, useState, useEffect, memo } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Check, BadgeCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const servicesSections = [
+/* ===================== DATA ===================== */
+
+type Package = {
+  name: string;
+  price: string;
+  features: string[];
+};
+
+type ServiceSection = {
+  title: string;
+  images: string[];
+  packages: Package[];
+};
+
+const servicesSections: ServiceSection[] = [
   {
     title: "Bridal Makeup Services",
     images: ["/photos/chirag1.jpeg", "/photos/chirag2.jpeg"],
-    imageHeight: "h-[520px] lg:h-[520px]",
     packages: [
       {
-        name: "Chirag’s Signature Bridal Makeup",
+        name: "Chirag's Signature Bridal Makeup",
         price: "₹99,999",
-        popular: true,
         features: [
           "Signature bridal look by Chirag",
           "Premium luxury products",
           "Fully customized luxury finish",
           "Complimentary mini touch-up kit",
-          "Excluding travel & accommodation",
         ],
       },
       {
         name: "Luxury Bridal Makeup (HD / Brush)",
         price: "₹79,999",
-        popular: false,
-        features: [
-          "HD / Brush technique",
-          "Flawless, long-wear, photo-ready finish",
-          "Excluding travel & accommodation",
-        ],
-      },
-      {
-        name: "Reception / Engagement / Cocktail Makeup",
-        price: "₹59,999",
-        popular: false,
-        features: [
-          "Glam makeup for wedding events",
-          "Customized per outfit & occasion",
-          "Excluding travel & accommodation",
-        ],
+        features: ["HD / Brush technique", "Flawless photo-ready finish"],
       },
     ],
   },
-
   {
     title: "Party Makeup Services",
     images: ["/photos/chirag4.jpeg"],
-    imageHeight: "h-[460px] lg:h-[540px]",
-    imagePosition: "50% 35%",
     packages: [
       {
         name: "Party Makeup – By Chirag Sharma",
         price: "₹19,999",
-        popular: true,
-        features: ["Excluding travel & accommodation"],
+        features: ["Luxury products", "Event-specific styling"],
       },
       {
         name: "Party Makeup – By Senior Artist",
         price: "₹6,999",
-        popular: false,
-        features: ["Excluding travel & accommodation"],
+        features: ["Professional party look"],
       },
     ],
   },
-
   {
     title: "Haldi & Mehendi Makeup Services",
     images: ["/photos/chirag5.jpeg"],
-    imageHeight: "h-[440px] lg:h-[540px]",
-    imagePosition: "50% 18%",
     packages: [
       {
         name: "Haldi / Mehendi – By Chirag Sharma",
         price: "₹44,999",
-        popular: true,
-        features: ["Excluding travel & accommodation"],
+        features: ["Fresh festive look", "Sweat-resistant finish"],
       },
       {
         name: "Haldi / Mehendi – By Senior Artist",
         price: "₹19,999",
-        popular: false,
-        features: ["Excluding travel & accommodation"],
+        features: ["Soft traditional makeup"],
       },
     ],
   },
-
   {
     title: "Groom Makeup Services",
     images: ["/photos/chirag3.jpeg"],
-    imageHeight: "h-[420px] lg:h-[670px]",
-    imagePosition: "50% 25%",
     packages: [
       {
         name: "Picture Perfect Photo-Ready Makeup",
         price: "₹14,999",
-        popular: true,
-        features: [
-          "Luxury high-end products",
-          "Hairstyling included",
-          "Excluding travel & accommodation",
-        ],
+        features: ["Natural HD finish", "Hairstyling included"],
       },
       {
         name: "Wedding Reception Groom Makeup",
         price: "₹19,999",
-        popular: false,
-        features: [
-          "Soft, flawless HD finish",
-          "Hairstyling included",
-          "Excluding travel & accommodation",
-        ],
+        features: ["Camera-ready look", "Luxury products"],
       },
     ],
   },
 ];
+
+const silkEase = "cubic-bezier(0.22,1,0.36,1)";
+
+/* ===================== TOGGLE ===================== */
+
+const ModeToggle = memo(
+  ({
+    mode,
+    setMode,
+  }: {
+    mode: "details" | "images";
+    setMode: (m: "details" | "images") => void;
+  }) => (
+    <div
+      className="
+        relative w-[168px] h-10 rounded-full p-1
+        bg-gradient-to-b from-pink-100 to-pink-50
+        shadow-inner flex items-center
+      "
+    >
+      <div
+        className="
+          absolute top-1 left-1 h-8 w-[78px]
+          rounded-full
+          bg-gradient-to-r from-pink-500 to-pink-600
+          shadow-[0_6px_18px_rgba(219,39,119,0.45)]
+          transition-transform duration-500
+        "
+        style={{
+          transform: mode === "images" ? "translateX(80px)" : "translateX(0)",
+          transitionTimingFunction: silkEase,
+        }}
+      />
+      <button
+        onClick={() => setMode("details")}
+        className={`relative z-10 flex-1 text-[13px] font-semibold transition-colors ${
+          mode === "details" ? "text-white" : "text-pink-700"
+        }`}
+      >
+        Details
+      </button>
+      <button
+        onClick={() => setMode("images")}
+        className={`relative z-10 flex-1 text-[13px] font-semibold transition-colors ${
+          mode === "images" ? "text-white" : "text-pink-700"
+        }`}
+      >
+        Images
+      </button>
+    </div>
+  )
+);
+
+/* ===================== IMAGE MODAL ===================== */
+
+const ImageModal = ({
+  images,
+  index,
+  onClose,
+}: {
+  images: string[];
+  index: number;
+  onClose: () => void;
+}) => {
+  const [current, setCurrent] = useState(index);
+  const startX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const next = () => setCurrent((c) => (c + 1) % images.length);
+  const prev = () =>
+    setCurrent((c) => (c - 1 + images.length) % images.length);
+
+  const onTouchStart = (e: React.TouchEvent) =>
+    (startX.current = e.touches[0].clientX);
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!startX.current) return;
+    const diff = startX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) diff > 0 ? next() : prev();
+    startX.current = null;
+  };
+
+  return (
+    <div
+      className="
+        fixed inset-0 z-50
+        bg-black/95
+        flex items-center justify-center
+        backdrop-blur-[2px]
+      "
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      <img
+        src={images[current]}
+        alt=""
+        className="
+          max-h-[90vh] max-w-[92vw]
+          object-contain
+          transition-all duration-700
+          drop-shadow-[0_20px_60px_rgba(0,0,0,0.6)]
+        "
+        style={{ transitionTimingFunction: silkEase }}
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              prev();
+            }}
+            className="
+              absolute left-6
+              text-white
+              opacity-80 hover:opacity-100
+              transition
+            "
+          >
+            <ChevronLeft size={36} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              next();
+            }}
+            className="
+              absolute right-6
+              text-white
+              opacity-80 hover:opacity-100
+              transition
+            "
+          >
+            <ChevronRight size={36} />
+          </button>
+        </>
+      )}
+
+      <button
+        onClick={onClose}
+        className="
+          absolute top-6 right-6
+          text-white
+          opacity-80 hover:opacity-100
+          transition
+        "
+      >
+        <X size={30} />
+      </button>
+    </div>
+  );
+};
+
+/* ===================== IMAGE PANEL ===================== */
+
+const ImagePanel = ({
+  images,
+  onOpen,
+}: {
+  images: string[];
+  onOpen: (i: number) => void;
+}) => {
+  const [index, setIndex] = useState(0);
+
+  return (
+    <div
+      className="
+        relative w-full h-[270px]
+        rounded-2xl overflow-hidden
+        bg-gradient-to-b from-black to-neutral-900
+        ring-1 ring-white/5
+        flex items-center justify-center
+      "
+    >
+      <div
+        className="flex h-full w-full transition-transform duration-700"
+        style={{
+          transform: `translateX(-${index * 100}%)`,
+          transitionTimingFunction: silkEase,
+        }}
+      >
+        {images.map((img, i) => (
+          <button
+            key={i}
+            onClick={() => onOpen(i)}
+            className="w-full h-full flex-shrink-0 flex items-center justify-center"
+          >
+            <img
+              src={img}
+              alt=""
+              className="
+                max-h-full max-w-full
+                object-contain
+                transition-transform duration-500
+                hover:scale-[1.02]
+              "
+            />
+          </button>
+        ))}
+      </div>
+
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={() =>
+              setIndex((i) => (i - 1 + images.length) % images.length)
+            }
+            className="
+              absolute left-3 top-1/2 -translate-y-1/2
+              bg-white/90
+              p-2.5 rounded-full
+              shadow-md
+              transition hover:bg-white
+            "
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setIndex((i) => (i + 1) % images.length)}
+            className="
+              absolute right-3 top-1/2 -translate-y-1/2
+              bg-white/90
+              p-2.5 rounded-full
+              shadow-md
+              transition hover:bg-white
+            "
+          >
+            <ChevronRight size={18} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ===================== SERVICE CARD ===================== */
+
+const ServiceCard = ({
+  section,
+  index,
+}: {
+  section: ServiceSection;
+  index: number;
+}) => {
+  const isEvenRow = Math.floor(index / 2) % 2 === 0;
+  const isLeftCard = index % 2 === 0;
+
+  const defaultMode: "details" | "images" =
+    (isEvenRow && isLeftCard) || (!isEvenRow && !isLeftCard)
+      ? "images"
+      : "details";
+
+  const [mode, setMode] = useState<"details" | "images">(defaultMode);
+  const [modal, setModal] = useState<number | null>(null);
+
+  return (
+    <div
+      className="
+        bg-white rounded-[28px]
+        min-h-[480px]
+        flex flex-col
+        border border-pink-100
+        shadow-[0_14px_42px_rgba(219,39,119,0.2)]
+        transition-shadow duration-500
+        hover:shadow-[0_22px_60px_rgba(219,39,119,0.28)]
+      "
+    >
+      <div className="px-8 py-5 flex items-center justify-between">
+        <h2 className="font-playfair font-bold text-[1.45rem] text-chirag-darkPurple tracking-tight">
+          {section.title}
+        </h2>
+        <ModeToggle mode={mode} setMode={setMode} />
+      </div>
+
+      <div className="px-8 pb-3 flex-1">
+        {mode === "images" ? (
+          <ImagePanel images={section.images} onOpen={setModal} />
+        ) : (
+          <div className="space-y-6">
+            {section.packages.map((pkg) => (
+              <div key={pkg.name} className="group">
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[0.95rem] text-gray-900 group-hover:text-pink-700 transition-colors">
+                    {pkg.name}
+                  </span>
+                  <span className="font-bold text-pink-600">
+                    {pkg.price}
+                  </span>
+                </div>
+                <ul className="mt-2.5 space-y-2">
+                  {pkg.features.map((f, i) => (
+                    <li
+                      key={i}
+                      className="flex text-[0.8rem] text-gray-600 leading-relaxed"
+                    >
+                      <Check
+                        size={14}
+                        className="mr-2 mt-0.5 text-pink-500"
+                      />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="px-8 py-5 mt-auto">
+        <Link
+          to={`/book?service=${encodeURIComponent(section.title)}`}
+          className="
+            block w-full text-center
+            bg-gradient-to-r from-pink-500 to-pink-600
+            text-white font-semibold text-[0.95rem]
+            py-3.5 rounded-2xl
+            shadow-[0_10px_30px_rgba(219,39,119,0.4)]
+            transition-all duration-500
+            hover:shadow-[0_18px_44px_rgba(219,39,119,0.55)]
+          "
+        >
+          Book This Service
+        </Link>
+      </div>
+
+      {modal !== null && (
+        <ImageModal
+          images={section.images}
+          index={modal}
+          onClose={() => setModal(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ===================== PAGE ===================== */
 
 const ServicesPage = () => {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
-      <main className="flex-grow">
-{/* ================= HERO ================= */}
-<section className="pt-28 pb-5 bg-white">
-  <div className="container-custom text-center">
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-bold leading-tight mb-6">
-        Our <span className="header-gradient">Services</span>
-      </h1>
+      <main className="flex-grow max-w-[1400px] mx-auto px-8 py-24">
+  {/* HEADER */}
+  <div className="text-center mb-12">
+    <h1 className="text-4xl md:text-[2.8rem] font-playfair font-bold leading-tight">
+      Our <span className="header-gradient">Services</span>
+    </h1>
 
-      <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
-        Premium makeup services crafted with luxury, elegance, and artistry —
-        designed to make every moment unforgettable.
-      </p>
+    <p className="mt-4 text-gray-600 text-lg leading-relaxed max-w-2xl mx-auto">
+      Premium makeup services crafted with
+      <span className="font-medium text-gray-800"> luxury</span>,
+      <span className="font-medium text-gray-800"> elegance</span>, and
+      <span className="font-medium text-gray-800"> artistry</span> designed
+      to make every moment truly unforgettable.
+    </p>
   </div>
-</section>
 
+  {/* SERVICES GRID */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+    {servicesSections.map((section, i) => (
+      <ServiceCard key={section.title} section={section} index={i} />
+    ))}
+  </div>
+</main>
 
-        {/* SERVICES */}
-        <section className="py-19 bg-gradient-to-b from-white to-chirag-pink/10">
-          <div className="max-w-7xl mx-auto px-4 space-y-36 mb-20">
-            {servicesSections.map((section, idx) => (
-              <div key={idx}>
-                <div
-                  className={`grid lg:grid-cols-2 gap-16 items-center ${
-                    idx % 2 === 1 ? "lg:grid-flow-dense" : ""
-                  }`}
-                >
-                  {/* IMAGE */}
-                  <div className={idx % 2 === 1 ? "lg:col-start-2" : ""}>
-                    {section.images.length === 2 ? (
-                      <div className="grid grid-rows-2 gap-6">
-                        {section.images.map((img, i) => (
-                          <div
-                            key={i}
-                            className={`overflow-hidden rounded-3xl shadow-2xl ${section.imageHeight}`}
-                          >
-                            <img
-                              src={img}
-                              alt={section.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div
-                        className={`overflow-hidden rounded-3xl shadow-2xl ${section.imageHeight}`}
-                      >
-                        <img
-                          src={section.images[0]}
-                          alt={section.title}
-                          className="w-full h-full object-cover"
-                          style={{
-                            objectPosition:
-                              section.imagePosition || "50% 30%",
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CONTENT */}
-                  <div className={idx % 2 === 1 ? "lg:col-start-1" : ""}>
-                    <h2 className="text-4xl font-bold mb-12 text-chirag-darkPurple">
-                      {section.title}
-                    </h2>
-
-                    <div className="space-y-8">
-                      {section.packages.map((pkg) => (
-                        <div
-                          key={pkg.name}
-                          className="relative bg-white/90 backdrop-blur
-                          p-8 rounded-2xl shadow-lg border border-chirag-pink/20
-                          hover:shadow-2xl transition"
-                        >
-                          {pkg.popular && (
-                            <span className="absolute -top-4 right-6
-                              bg-gradient-to-r from-chirag-pink to-chirag-peach
-                              text-black text-xs font-bold px-4 py-1.5 rounded-full
-                              flex items-center shadow-xl ring-1 ring-white/40">
-                              <BadgeCheck size={14} className="mr-1.5" />
-                              Most Popular
-                            </span>
-                          )}
-
-                          <div className="flex justify-between items-start gap-4 mb-4">
-                            <h3 className="text-xl font-bold text-chirag-darkPurple">
-                              {pkg.name}
-                            </h3>
-                            <span className="text-2xl font-bold text-chirag-darkPurple">
-                              {pkg.price}
-                            </span>
-                          </div>
-
-                          <ul className="space-y-3 mb-6 text-gray-700">
-                            {pkg.features.map((f, i) => (
-                              <li key={i} className="flex items-start">
-                                <Check size={16} className="mr-2 text-chirag-pink mt-1" />
-                                {f}
-                              </li>
-                            ))}
-                          </ul>
-
-                          <Link
-                            to={`/book?service=${encodeURIComponent(
-                              section.title
-                            )}&package=${encodeURIComponent(pkg.name)}`}
-                            className="block w-full text-center py-3 rounded-xl
-                            bg-gradient-to-r from-chirag-pink to-chirag-peach
-                            text-black font-semibold hover:shadow-xl transition"
-                          >
-                            Book Now
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </main>
 
       <Footer />
     </div>
