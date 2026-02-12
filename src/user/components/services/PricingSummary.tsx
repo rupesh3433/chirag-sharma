@@ -167,7 +167,7 @@ export const PricingSummary: React.FC<PricingSummaryProps> = ({
             xs:top-[72px]
             sm:top-[76px]
             md:top-[80px]
-            lg:top-[84px]
+            lg:top-[70px]
             xl:top-[70px]
 
             right-3
@@ -185,14 +185,14 @@ export const PricingSummary: React.FC<PricingSummaryProps> = ({
             sm:px-5
             md:px-3
 
-            py-1.5
-            xs:py-2
-            sm:py-2.5
+            py-1
+            xs:py-1
+            sm:py-2
 
             text-[10px]
             xs:text-xs
             sm:text-sm
-            md:text-base
+            md:text-10px
 
             rounded-full
             font-medium
