@@ -77,7 +77,7 @@ const Index = () => {
             <SocialMediaPage />
           </div>
         </section>
-
+        
         {/* TESTIMONIALS */}
         <section className="w-full overflow-hidden lg:overflow-visible">
           <div className="w-full max-w-[100vw] lg:max-w-none">
