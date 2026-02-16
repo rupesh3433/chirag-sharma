@@ -1,3 +1,4 @@
+// src/user/UserApp.tsx
 import "./userindex.css";
 import "./UserApp.css";
 // ------------------------------
@@ -13,6 +14,8 @@ import About from "./pages/AboutPage";
 import Portfolio from "./pages/PortfolioPage";
 import Services from "./pages/ServicesPage";
 import Book from "./pages/BookPage";
+import PaymentPage from "./pages/PaymentPage";
+import BookingStatusPage from "./pages/BookingStatusPage";
 import NotFound from "./pages/NotFound";
 
 // ✅ GLOBAL CHATBOT
@@ -20,6 +23,7 @@ import Chatbot from "./components/chatbot/Chatbot";
 import ScrollToTop from "./components/ScrollToTop";
 import UserLayout from "./components/layout/UserLayout";
 import EventsPage from "./pages/EventsPage";
+
 const queryClient = new QueryClient();
 
 const UserApp = () => {
@@ -39,6 +43,8 @@ const UserApp = () => {
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="book" element={<Book />} />
+            <Route path="payment" element={<PaymentPage />} />
+            <Route path="booking-status/:bookingId" element={<BookingStatusPage />} />
             <Route path="about" element={<About />} />
             <Route path="*" element={<NotFound />} />
           </Route>

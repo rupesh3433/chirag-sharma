@@ -14,6 +14,8 @@ import {
   Package,
   Mail,
   Phone,
+  CreditCard,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@shared/components/ui/button";
 import { Input } from "@shared/components/ui/input";
@@ -43,9 +45,10 @@ import {
   AlertDialogTitle,
 } from "@shared/components/ui/alert-dialog";
 import StatusBadge from "../components/bookings/StatusBadge";
+import PaymentStatusBadge from "../components/bookings/PaymentStatusBadge";
 import BookingDetailsModal from "../components/bookings/BookingDetailsModal";
 import { bookingsApi } from "../services/api";
-import { Booking } from "../types";
+import { Booking, BookingStatus, PaymentStatus } from "../types";
 import { format } from "date-fns";
 import { useToast } from "@/shared/hooks/use-toast";
 
@@ -61,6 +64,9 @@ const Bookings = () => {
   );
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get("status") || "all"
+  );
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState(
+    searchParams.get("payment_status") || "all"
   );
   const [dateFrom, setDateFrom] = useState(searchParams.get("from") || "");
   const [dateTo, setDateTo] = useState(searchParams.get("to") || "");
@@ -82,6 +88,7 @@ const Bookings = () => {
 
     if (searchQuery) params.search = searchQuery;
     if (statusFilter !== "all") params.status = statusFilter;
+    if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter;
     if (dateFrom) params.from = dateFrom;
     if (dateTo) params.to = dateTo;
     if (currentPage > 1) params.page = currentPage.toString();
@@ -90,6 +97,7 @@ const Bookings = () => {
   }, [
     searchQuery,
     statusFilter,
+    paymentStatusFilter,
     dateFrom,
     dateTo,
     currentPage,
@@ -108,7 +116,8 @@ const Bookings = () => {
     try {
       const response = await bookingsApi.search({
         search: searchQuery || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
+        status: statusFilter !== "all" ? (statusFilter as BookingStatus) : undefined,
+        payment_status: paymentStatusFilter !== "all" ? (paymentStatusFilter as PaymentStatus) : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         limit: ITEMS_PER_PAGE,
@@ -126,7 +135,7 @@ const Bookings = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, dateFrom, dateTo, toast]);
+  }, [currentPage, searchQuery, statusFilter, paymentStatusFilter, dateFrom, dateTo, toast]);
 
   useEffect(() => {
     fetchBookings();
@@ -140,24 +149,32 @@ const Bookings = () => {
   const handleClearFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
+    setPaymentStatusFilter("all");
     setDateFrom("");
     setDateTo("");
     setCurrentPage(1);
   };
 
   const handleViewDetails = async (booking: Booking) => {
-    try {
-      const response = await bookingsApi.getById(booking._id);
-      setSelectedBooking(response.data);
-      setIsDetailsOpen(true);
-    } catch {
-      setSelectedBooking(booking);
-      setIsDetailsOpen(true);
-    }
+    setSelectedBooking(booking);
+    setIsDetailsOpen(true);
   };
 
   const handleDeleteBooking = async () => {
     if (!deleteBookingId) return;
+
+    const booking = bookings.find(b => b._id === deleteBookingId);
+    
+    // Check if booking is paid
+    if (booking?.payment_status === 'paid') {
+      toast({
+        title: "Cannot Delete",
+        description: "Cannot delete a paid booking. Please process a refund first.",
+        variant: "destructive",
+      });
+      setDeleteBookingId(null);
+      return;
+    }
 
     try {
       await bookingsApi.delete(deleteBookingId);
@@ -166,10 +183,11 @@ const Bookings = () => {
         description: "Booking deleted successfully.",
       });
       fetchBookings();
-    } catch {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } };
       toast({
         title: "Error",
-        description: "Could not delete booking.",
+        description: err.response?.data?.detail || "Could not delete booking.",
         variant: "destructive",
       });
     } finally {
@@ -177,35 +195,27 @@ const Bookings = () => {
     }
   };
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
-    try {
-      await bookingsApi.updateStatus(bookingId, newStatus);
-      toast({
-        title: "Updated",
-        description: `Status changed to ${newStatus}.`,
-      });
-      fetchBookings();
-      setIsDetailsOpen(false);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Could not update status.",
-        variant: "destructive",
-      });
-    }
+  const handleStatusUpdate = () => {
+    fetchBookings();
   };
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const hasActiveFilters =
-    searchQuery || statusFilter !== "all" || dateFrom || dateTo;
+    searchQuery || statusFilter !== "all" || paymentStatusFilter !== "all" || dateFrom || dateTo;
+
+  // Helper to format payment amount
+  const formatPaymentAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
+    if (!amount) return '-';
+    return `₹${(amount / 100).toFixed(2)} ${currency || ''}`;
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-        <h1 className="font-display text-xl sm:text-3xl font-bold break-words">
-        Bookings
+          <h1 className="font-display text-xl sm:text-3xl font-bold break-words">
+            Bookings
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 sm:mt-1">
             {totalCount} total bookings
@@ -253,11 +263,11 @@ const Bookings = () => {
             />
           </div>
 
-          {/* Row 2: Status, From Date, To Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Row 2: Status Filters, Date Range */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Status
+                Booking Status
               </label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-10">
@@ -267,8 +277,29 @@ const Bookings = () => {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Payment Status
+              </label>
+              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="All Payments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payments</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="payment_pending">Payment Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                  <SelectItem value="partial_refund">Partial Refund</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -298,68 +329,68 @@ const Bookings = () => {
             </div>
           </div>
 
-        {/* Row 3: Action Buttons */}
-<div className="flex flex-wrap gap-2">
-  <Button
-    onClick={handleSearch}
-    size="sm"
-    className="
-      h-10
-      gradient-primary
-      text-white
-      shadow-rose
-      [&_svg]:text-white
-      [&_svg]:stroke-white
-      hover:opacity-90
-      transition-opacity
-    "
-  >
-    <Filter className="h-4 w-4 mr-2" />
-    Apply Filters
-  </Button>
+          {/* Row 3: Action Buttons */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={handleSearch}
+              size="sm"
+              className="
+                h-10
+                gradient-primary
+                text-white
+                shadow-rose
+                [&_svg]:text-white
+                [&_svg]:stroke-white
+                hover:opacity-90
+                transition-opacity
+              "
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Apply Filters
+            </Button>
 
-  {hasActiveFilters && (
-    <Button
-      onClick={handleClearFilters}
-      size="sm"
-      variant="outline"
-      className="
-        h-10
-        border-destructive/30
-        text-destructive
-        hover:bg-destructive/10
-        hover:text-destructive
-        transition-colors
-      "
-    >
-      <X className="h-4 w-4 mr-2" />
-      Clear All
-    </Button>
-  )}
-</div>
-
+            {hasActiveFilters && (
+              <Button
+                onClick={handleClearFilters}
+                size="sm"
+                variant="outline"
+                className="
+                  h-10
+                  border-destructive/30
+                  text-destructive
+                  hover:bg-destructive/10
+                  hover:text-destructive
+                  transition-colors
+                "
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden lg:block bg-card rounded-xl border">
-        <Table className="table-fixed w-full">
+      <div className="hidden lg:block bg-card rounded-xl border overflow-x-auto">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Package</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="w-20">ID</TableHead>
+              <TableHead className="min-w-[180px]">Customer</TableHead>
+              <TableHead className="min-w-[150px]">Service</TableHead>
+              <TableHead className="w-28">Date</TableHead>
+              <TableHead className="w-32">Booking</TableHead>
+              <TableHead className="w-36">Payment</TableHead>
+              <TableHead className="w-32">Amount</TableHead>
+              <TableHead className="w-28">Created</TableHead>
+              <TableHead className="text-right w-28">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10">
+                <TableCell colSpan={9} className="text-center py-10">
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     <span>Loading...</span>
@@ -369,7 +400,7 @@ const Bookings = () => {
             ) : bookings.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="text-center py-10 text-muted-foreground"
                 >
                   No bookings found
@@ -378,28 +409,46 @@ const Bookings = () => {
             ) : (
               bookings.map((b) => (
                 <TableRow key={b._id} className="hover:bg-muted/50">
-<TableCell className="font-mono text-xs break-words">
-{b._id.slice(-6).toUpperCase()}
+                  <TableCell className="font-mono text-xs">
+                    #{b._id.slice(-6).toUpperCase()}
                   </TableCell>
                   <TableCell>
-  <div className="min-w-0">
-    <p className="font-medium break-words">{b.name}</p>
-    <p className="text-xs text-muted-foreground break-words">
-      {b.email}
-    </p>
-  </div>
-</TableCell>
-
-                  <TableCell className="break-words whitespace-normal">
-                    {b.service}
-                  </TableCell>{" "}
-                  <TableCell>{b.package || "-"}</TableCell>
-                  <TableCell className="break-words">{b.date}</TableCell>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{b.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {b.email}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{b.service}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {b.package || "-"}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{b.date}</TableCell>
                   <TableCell>
                     <StatusBadge status={b.status} />
                   </TableCell>
-                  <TableCell className="break-words">
-                    {format(new Date(b.created_at as string), "MMM d, yyyy")}
+                  <TableCell>
+                    <PaymentStatusBadge status={b.payment_status} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">
+                        {formatPaymentAmount(b.payment_amount, b.payment_currency)}
+                      </p>
+                      {b.payment_method && (
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {b.payment_method}
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {format(new Date(b.created_at), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -407,6 +456,7 @@ const Bookings = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewDetails(b)}
+                        title="View details"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -415,6 +465,8 @@ const Bookings = () => {
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setDeleteBookingId(b._id)}
+                        disabled={b.payment_status === 'paid'}
+                        title={b.payment_status === 'paid' ? "Cannot delete paid booking" : "Delete booking"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -461,8 +513,28 @@ const Bookings = () => {
                     </p>
                   </div>
                 </div>
-                <StatusBadge status={b.status} className="flex-shrink-0" />
+                <div className="flex flex-col items-end gap-1">
+                  <StatusBadge status={b.status} className="flex-shrink-0" />
+                  <PaymentStatusBadge status={b.payment_status} className="flex-shrink-0" />
+                </div>
               </div>
+
+              {/* Payment Amount (if exists) */}
+              {b.payment_amount && (
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                  <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">
+                      {formatPaymentAmount(b.payment_amount, b.payment_currency)}
+                    </p>
+                    {b.payment_method && (
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {b.payment_method}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Details Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
@@ -506,6 +578,7 @@ const Bookings = () => {
                     e.stopPropagation();
                     setDeleteBookingId(b._id);
                   }}
+                  disabled={b.payment_status === 'paid'}
                 >
                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
@@ -551,8 +624,12 @@ const Bookings = () => {
       <BookingDetailsModal
         booking={selectedBooking}
         isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedBooking(null);
+        }}
         onStatusUpdate={handleStatusUpdate}
+        onRefresh={fetchBookings}
       />
 
       <AlertDialog

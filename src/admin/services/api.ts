@@ -1,5 +1,21 @@
 import axios, { AxiosError } from 'axios';
-import { Knowledge, Event, EventStatus, PriceCategory, CreateEventDto } from '../types';
+import {
+  Booking,
+  BookingSearchParams,
+  BookingSearchResponse,
+  BookingDetailResponse,
+  StatusUpdateResponse,
+  RefundResponse,
+  PaymentHistoryResponse,
+  PaymentAnalyticsResponse,
+  Analytics,
+  ServiceAnalytics,
+  MonthlyData,
+  Knowledge,
+  Event,
+  EventStatus,
+  LoginResponse,
+} from '@admin/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -39,7 +55,7 @@ api.interceptors.request.use(
 ------------------------------------------------------- */
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<any>) => {
+  (error: AxiosError<{ detail?: string }>) => {
     // Handle timeout errors
     if (error.code === 'ECONNABORTED') {
       return Promise.reject({
@@ -84,7 +100,7 @@ export default api;
 ======================================================= */
 export const authApi = {
   login: (email: string, password: string) =>
-    api.post('/admin/login', { email, password }),
+    api.post<LoginResponse>('/admin/login', { email, password }),
 
   verifyToken: () =>
     api.get('/admin/verify-token'),
@@ -100,31 +116,99 @@ export const authApi = {
    BOOKINGS API
 ======================================================= */
 export const bookingsApi = {
+  /**
+   * Get all bookings with optional filtering
+   */
   getAll: (params?: {
     status?: string;
+    payment_status?: string;
     limit?: number;
     skip?: number;
   }) =>
-    api.get('/admin/bookings', { params }),
+    api.get<BookingSearchResponse>("/admin/bookings", { params }),
 
+  /**
+   * Get single booking details with payment information
+   */
   getById: (id: string) =>
-    api.get(`/admin/bookings/${id}`),
+    api.get<BookingDetailResponse>(`/admin/bookings/${id}`),
 
-  search: (params: {
-    search?: string;
-    status?: string;
-    date_from?: string;
-    date_to?: string;
-    limit?: number;
-    skip?: number;
-  }) =>
-    api.post('/admin/bookings/search', params),
+  /**
+   * Advanced search with multiple filters
+   */
+  search: (params: BookingSearchParams) =>
+    api.post<BookingSearchResponse>("/admin/bookings/search", params),
 
-  updateStatus: (id: string, status: string) =>
-    api.patch(`/admin/bookings/${id}/status`, { status }),
+  /**
+   * Update booking status
+   * When status = "approved", payment_amount is REQUIRED
+   */
+  updateStatus: (
+    id: string,
+    status: string,
+    payment_amount?: number
+  ) =>
+    api.patch<StatusUpdateResponse>(
+      `/admin/bookings/${id}/status`,
+      { status },
+      {
+        params: payment_amount !== undefined
+          ? { payment_amount }
+          : undefined,
+      }
+    ),
 
+  /**
+   * Delete booking (only if unpaid)
+   */
   delete: (id: string) =>
-    api.delete(`/admin/bookings/${id}`),
+    api.delete<{ success: boolean; message: string; booking_id: string }>(
+      `/admin/bookings/${id}`
+    ),
+
+  /**
+   * Process refund for a paid booking
+   */
+  refund: (
+    id: string,
+    amount?: number,
+    reason?: string
+  ) =>
+    api.post<RefundResponse>(`/admin/bookings/${id}/refund`, null, {
+      params: {
+        amount,
+        reason,
+      },
+    }),
+
+  /**
+   * Get complete payment history for a booking
+   */
+  getPaymentHistory: (id: string) =>
+    api.get<PaymentHistoryResponse>(`/admin/bookings/${id}/payment-history`),
+
+  /**
+   * Get payment analytics
+   */
+  getPaymentAnalytics: (params?: {
+    start_date?: string;
+    end_date?: string;
+  }) =>
+    api.get<PaymentAnalyticsResponse>('/admin/bookings/payments/analytics', { params }),
+
+  /**
+   * Get bookings statistics overview
+   */
+  getStats: () =>
+    api.get<{
+      success: boolean;
+      stats: {
+        total_bookings: number;
+        recent_bookings: number;
+        status_breakdown: Record<string, number>;
+        payment_breakdown: Record<string, number>;
+      };
+    }>('/admin/bookings/stats/overview'),
 };
 
 /* =======================================================
@@ -132,13 +216,13 @@ export const bookingsApi = {
 ======================================================= */
 export const analyticsApi = {
   getOverview: () =>
-    api.get('/admin/analytics/overview'),
+    api.get<Analytics>('/admin/analytics/overview'),
 
   getByService: () =>
-    api.get('/admin/analytics/by-service'),
+    api.get<{ services: ServiceAnalytics[] }>('/admin/analytics/by-service'),
 
   getByMonth: () =>
-    api.get('/admin/analytics/by-month'),
+    api.get<{ monthly_data: MonthlyData[] }>('/admin/analytics/by-month'),
 };
 
 /* =======================================================
@@ -234,10 +318,10 @@ export const eventsApi = {
       }
       
       return response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
       
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout - upload took too long. Please try again.');
       }
       throw error;

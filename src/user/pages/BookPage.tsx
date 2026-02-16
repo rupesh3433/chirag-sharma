@@ -1,4 +1,6 @@
+// src/user/pages/BookPage.tsx
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -11,8 +13,7 @@ import {
   Phone,
   X,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL;
+import { bookingAPI, APIError, type BookingRequest } from "@user/services/api";
 
 const SERVICES: Record<string, string[]> = {
   "Bridal Makeup Services": [
@@ -59,6 +60,8 @@ type FormState = {
 };
 
 export default function BookPage() {
+  const navigate = useNavigate();
+  
   const emptyForm: FormState = {
     service: "",
     package: "",
@@ -75,6 +78,7 @@ export default function BookPage() {
 
   const [formData, setFormData] = useState<FormState>(emptyForm);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -105,21 +109,32 @@ export default function BookPage() {
     setOtpError("");
 
     try {
-      const res = await fetch(`${API_BASE}/bookings/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, phone: fullPhone }),
-      });
+      const requestData: BookingRequest = {
+        service: formData.service,
+        package: formData.package,
+        name: formData.name,
+        email: formData.email,
+        phone: fullPhone,
+        phone_country: formData.phone_country,
+        service_country: formData.service_country,
+        address: formData.address,
+        pincode: formData.pincode,
+        date: formData.date,
+        message: formData.message || undefined,
+      };
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Failed to send OTP");
+      const data = await bookingAPI.requestBooking(requestData);
 
       setBookingId(data.booking_id);
       setShowOtpModal(true);
       setResendTimer(30);
       setCanResend(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      if (err instanceof APIError) {
+        alert(err.message);
+      } else {
+        alert("Failed to send OTP. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -129,23 +144,30 @@ export default function BookPage() {
     if (!bookingId || otp.length !== 6) return;
 
     try {
-      const res = await fetch(`${API_BASE}/bookings/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ booking_id: bookingId, otp }),
+      const data = await bookingAPI.verifyOTP({
+        booking_id: bookingId,
+        otp,
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Invalid OTP");
 
       setShowOtpModal(false);
       setShowSuccess(true);
+      setConfirmedBookingId(data.booking_id);
       setFormData(emptyForm);
       setOtp("");
       setBookingId(null);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (err: any) {
-      setOtpError(err.message || "Invalid OTP");
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+        // Optionally navigate to booking status page
+        // navigate(`/booking-status/${data.booking_id}`);
+      }, 5000);
+    } catch (err) {
+      if (err instanceof APIError) {
+        setOtpError(err.message);
+      } else {
+        setOtpError("Invalid OTP. Please try again.");
+      }
     }
   };
 
@@ -153,7 +175,7 @@ export default function BookPage() {
     setShowOtpModal(false);
     setOtp("");
     setBookingId(null);
-    setOtpError("Booking request was not completed.");
+    setOtpError("");
   };
 
   useEffect(() => {
@@ -187,16 +209,23 @@ export default function BookPage() {
     setOtpError("");
 
     try {
-      await fetch(`${API_BASE}/bookings/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          booking_id: bookingId,
-          phone: fullPhone,
-        }),
-      });
-    } catch {
+      const requestData: BookingRequest = {
+        service: formData.service,
+        package: formData.package,
+        name: formData.name,
+        email: formData.email,
+        phone: fullPhone,
+        phone_country: formData.phone_country,
+        service_country: formData.service_country,
+        address: formData.address,
+        pincode: formData.pincode,
+        date: formData.date,
+        message: formData.message || undefined,
+        booking_id: bookingId,
+      };
+
+      await bookingAPI.requestBooking(requestData);
+    } catch (err) {
       setOtpError("Failed to resend OTP");
     }
   };
@@ -225,11 +254,21 @@ export default function BookPage() {
         <section className="pb-12 bg-gradient-to-b from-white to-chirag-pink/10">
           <div className="max-w-screen-md mx-auto px-[clamp(0.75rem,4vw,1.25rem)]">
             {showSuccess && (
-              <div className="mb-4 rounded-xl bg-green-100 border border-green-300 px-4 py-3 text-center">
+              <div className="mb-4 rounded-xl bg-green-100 border border-green-300 px-4 py-3">
                 <div className="flex items-center justify-center gap-2 text-green-800 font-semibold text-sm">
                   <CheckCircle2 className="h-4 w-4" />
-                  Booking confirmed!
+                  <span>Booking confirmed! We'll notify you once approved.</span>
                 </div>
+                {confirmedBookingId && (
+                  <div className="mt-2 text-center">
+                    <button
+                      onClick={() => navigate(`/booking-status/${confirmedBookingId}`)}
+                      className="text-xs text-green-700 underline hover:text-green-900"
+                    >
+                      View booking status
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -365,6 +404,7 @@ export default function BookPage() {
                 value={formData.date}
                 onChange={handleChange}
                 required
+                min={new Date().toISOString().split('T')[0]}
               />
 
               <div className="flex flex-col">
