@@ -1,3 +1,5 @@
+// src/services/api.ts
+
 import axios, { AxiosError } from 'axios';
 import {
   Booking,
@@ -20,43 +22,36 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 /* -------------------------------------------------------
-   Axios instance with EXTENDED TIMEOUT for slow backend
+   Axios instance
 ------------------------------------------------------- */
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 90000, // 90 seconds timeout for slow backend responses
+  timeout: 90000,
 });
 
 /* -------------------------------------------------------
-   Request Interceptor
-   → Attach JWT only if present
+   Request Interceptor — attach JWT
 ------------------------------------------------------- */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('admin_token');
-
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
 /* -------------------------------------------------------
-   Response Interceptor
-   → Logout ONLY for protected routes
-   → Never break forgot/reset password flow
-   → Handle timeout and network errors gracefully
+   Response Interceptor — handle 401 + network errors
 ------------------------------------------------------- */
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ detail?: string }>) => {
-    // Handle timeout errors
     if (error.code === 'ECONNABORTED') {
       return Promise.reject({
         message: 'Request timeout - server took too long to respond. Please try again.',
@@ -65,7 +60,6 @@ api.interceptors.response.use(
       });
     }
 
-    // Handle network errors
     if (!error.response) {
       return Promise.reject({
         message: 'Network error - please check your internet connection.',
@@ -82,7 +76,6 @@ api.interceptors.response.use(
       currentPath.startsWith('/admin/reset-password') ||
       currentPath.startsWith('/admin/login');
 
-    // Only logout for 401 on protected routes
     if (status === 401 && !isAuthRoute) {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
@@ -125,7 +118,7 @@ export const bookingsApi = {
     limit?: number;
     skip?: number;
   }) =>
-    api.get<BookingSearchResponse>("/admin/bookings", { params }),
+    api.get<BookingSearchResponse>('/admin/bookings', { params }),
 
   /**
    * Get single booking details with payment information
@@ -137,24 +130,34 @@ export const bookingsApi = {
    * Advanced search with multiple filters
    */
   search: (params: BookingSearchParams) =>
-    api.post<BookingSearchResponse>("/admin/bookings/search", params),
+    api.post<BookingSearchResponse>('/admin/bookings/search', params),
 
   /**
-   * Update booking status
-   * When status = "approved", payment_amount is REQUIRED
+   * Update booking status.
+   *
+   * When status = "approved", pass approvalData with:
+   *   - payment_amount: number  (in paise/paisa — smallest unit)
+   *   - payment_currency: "INR" | "NPR"
+   *
+   * Backend stores base amount + currency. No payment order is created yet.
+   * A WhatsApp link is sent to the customer to select their preferred provider.
+   * Backend auto-converts to both INR (Razorpay) and NPR (Khalti) amounts.
+   *
+   * For non-approval status changes (cancelled, completed), pass no approvalData.
    */
   updateStatus: (
     id: string,
     status: string,
-    payment_amount?: number
+    approvalData?: {
+      payment_amount: number;       // in smallest unit (paise/paisa)
+      payment_currency: 'INR' | 'NPR';
+    }
   ) =>
     api.patch<StatusUpdateResponse>(
       `/admin/bookings/${id}/status`,
-      { status },
       {
-        params: payment_amount !== undefined
-          ? { payment_amount }
-          : undefined,
+        status,
+        ...(approvalData ?? {}),   // spreads payment_amount + payment_currency into body
       }
     ),
 
@@ -167,32 +170,39 @@ export const bookingsApi = {
     ),
 
   /**
-   * Process refund for a paid booking
+   * Process refund for a paid booking.
+   * Backend auto-detects provider from payment record (Razorpay or Khalti).
+   * For Khalti bank refunds, pass mobile number.
    */
   refund: (
     id: string,
     amount?: number,
-    reason?: string
+    reason?: string,
+    mobile?: string
   ) =>
     api.post<RefundResponse>(`/admin/bookings/${id}/refund`, null, {
       params: {
-        amount,
-        reason,
+        ...(amount !== undefined && { amount }),
+        ...(reason && { reason }),
+        ...(mobile && { mobile }),
       },
     }),
 
   /**
-   * Get complete payment history for a booking
+   * Get complete payment history for a booking (all providers)
    */
   getPaymentHistory: (id: string) =>
     api.get<PaymentHistoryResponse>(`/admin/bookings/${id}/payment-history`),
 
   /**
-   * Get payment analytics
+   * Get payment analytics.
+   * Pass provider to filter by "razorpay" or "khalti".
+   * Omit provider to get combined multi-provider analytics.
    */
   getPaymentAnalytics: (params?: {
     start_date?: string;
     end_date?: string;
+    provider?: 'razorpay' | 'khalti';
   }) =>
     api.get<PaymentAnalyticsResponse>('/admin/bookings/payments/analytics', { params }),
 
@@ -246,10 +256,9 @@ export const knowledgeApi = {
 };
 
 /* =======================================================
-   EVENTS API 
+   EVENTS API
 ======================================================= */
 export const eventsApi = {
-  // Image upload
   uploadImage: (file: File, folder: string = 'events') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -261,21 +270,20 @@ export const eventsApi = {
       format: string;
     }>('/admin/events/upload-image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000, // 2 minutes for image uploads
+      timeout: 120000,
     });
   },
 
   deleteImage: (public_id: string) =>
     api.delete<{ success: boolean }>(`/admin/events/delete-image/${public_id}`),
 
-  // Events CRUD
   getAll: (params?: {
     status?: EventStatus;
     is_active?: boolean;
     page?: number;
     limit?: number;
     search?: string;
-  }) => 
+  }) =>
     api.get<{
       events: Event[];
       total: number;
@@ -289,45 +297,41 @@ export const eventsApi = {
   create: (data: FormData) =>
     api.post<{ message: string; event: Event }>('/admin/events', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000, // 2 minutes for creating events with images
+      timeout: 120000,
     }),
 
   updateWithFiles: async (id: string, formData: FormData) => {
     const token = localStorage.getItem('admin_token');
-    
-    // Create abort controller for manual timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
-    
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/events/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type - let browser set it with boundary for FormData
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to update event');
       }
-      
+
       return response.json();
     } catch (error: unknown) {
       clearTimeout(timeoutId);
-      
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout - upload took too long. Please try again.');
       }
       throw error;
     }
   },
-  
+
   update: (id: string, data: Partial<Event>) =>
     api.put<{ message: string; event: Event }>(`/admin/events/${id}`, data),
 
@@ -336,11 +340,13 @@ export const eventsApi = {
 
   updateStatus: (id: string, status: EventStatus) =>
     api.patch<{ message: string }>(`/admin/events/${id}/status`, null, {
-      params: { status }
+      params: { status },
     }),
 
   toggleActive: (id: string) =>
-    api.patch<{ message: string; is_active: boolean }>(`/admin/events/${id}/toggle-active`),
+    api.patch<{ message: string; is_active: boolean }>(
+      `/admin/events/${id}/toggle-active`
+    ),
 
   uploadGalleryImages: (id: string, images: File[]) => {
     const formData = new FormData();
@@ -350,13 +356,15 @@ export const eventsApi = {
     return api.post<{ message: string; new_images: string[] }>(
       `/admin/events/${id}/upload-gallery`,
       formData,
-      { 
+      {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000, // 2 minutes for gallery uploads
+        timeout: 120000,
       }
     );
   },
 
   deleteGalleryImage: (eventId: string, imageIndex: number) =>
-    api.delete<{ message: string }>(`/admin/events/${eventId}/gallery/${imageIndex}`),
+    api.delete<{ message: string }>(
+      `/admin/events/${eventId}/gallery/${imageIndex}`
+    ),
 };

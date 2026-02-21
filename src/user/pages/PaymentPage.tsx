@@ -1,5 +1,11 @@
 // src/user/pages/PaymentPage.tsx
-import { useState, useEffect } from "react";
+// ============================================================
+// Multi-Provider Payment Page
+// Flow: Load booking → Show provider options → User selects →
+//       createPayment API → Razorpay checkout OR Khalti redirect
+// ============================================================
+
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -16,142 +22,63 @@ import {
   Building2,
   Smartphone,
 } from "lucide-react";
+import {
+  paymentAPI,
+  bookingAPI,
+  loadRazorpayScript,
+  APIError,
+  type Booking,
+  type PaymentOption,
+  type RazorpayOrderResponse,
+  type KhaltiOrderResponse,
+  type RazorpayResponse,
+} from "@user/services/api";
 
 // ============================================================
-// TYPES
-// ============================================================
-
-interface Booking {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  service: string;
-  package: string;
-  date: string;
-  address: string;
-  pincode: string;
-  service_country: string;
-  message?: string;
-  status: string;
-  payment_amount?: number;
-  payment_currency?: string;
-  payment_order_id?: string;
-}
-
-interface RazorpayResponse {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-}
-
-interface RazorpayOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  order_id: string;
-  handler: (response: RazorpayResponse) => void;
-  prefill: {
-    name: string;
-    email: string;
-    contact: string;
-  };
-  theme: {
-    color: string;
-  };
-  modal: {
-    ondismiss: () => void;
-  };
-}
-
-declare global {
-  interface Window {
-    Razorpay: new (options: RazorpayOptions) => {
-      open: () => void;
-    };
-  }
-}
-
-// ============================================================
-// API BASE URL
-// ============================================================
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-// ============================================================
-// RAZORPAY KEY - CRITICAL
+// ENV
 // ============================================================
 
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
 if (!RAZORPAY_KEY) {
-  console.error("❌ RAZORPAY_KEY_ID is not configured in environment variables");
+  console.error("❌ VITE_RAZORPAY_KEY_ID is not set in environment variables");
 }
 
 // ============================================================
-// UTILITY FUNCTIONS
+// TYPES
 // ============================================================
 
-const loadRazorpayScript = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    // Check if already loaded
-    if (document.getElementById("razorpay-script")) {
-      resolve(true);
-      return;
-    }
+type PaymentStep = "loading" | "select" | "processing" | "success" | "failed";
+type ProviderChoice = "razorpay" | "khalti";
 
-    const script = document.createElement("script");
-    script.id = "razorpay-script";
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => {
-      console.log("✅ Razorpay SDK loaded successfully");
-      resolve(true);
-    };
-    script.onerror = () => {
-      console.error("❌ Failed to load Razorpay SDK");
-      resolve(false);
-    };
-    document.body.appendChild(script);
-  });
-};
+// ============================================================
+// CURRENCY HELPERS
+// ============================================================
 
-const fetchBookingDetails = async (bookingId: string): Promise<Booking> => {
-  const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch booking details");
+/**
+ * Format an amount (in smallest currency unit) for display.
+ *
+ * Always use the provider option's own currency — never infer from
+ * booking.payment_currency. Backend has already done any conversion.
+ *
+ * @param amountInSmallestUnit - paise (INR) or paisa (NPR)
+ * @param currency - "INR" | "NPR"
+ */
+const formatCurrency = (
+  amountInSmallestUnit: number,
+  currency: string
+): string => {
+  const amount = amountInSmallestUnit / 100;
+  if (currency === "NPR") {
+    return `NPR ${amount.toLocaleString("en-NP", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
-  const data = await response.json();
-  return data.booking;
-};
-
-const verifyPayment = async (paymentData: RazorpayResponse): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/bookings/razorpay/verify-payment`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(paymentData),
-  });
-
-  if (!response.ok) {
-    throw new Error("Payment verification failed");
-  }
-};
-
-const markPaymentFailed = async (orderId: string, reason: string): Promise<void> => {
-  try {
-    await fetch(`${API_BASE_URL}/bookings/razorpay/payment-failed`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        order_id: orderId,
-        reason,
-      }),
-    });
-  } catch (error) {
-    console.error("Failed to mark payment as failed:", error);
-  }
+  return `₹${amount.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 // ============================================================
@@ -162,418 +89,603 @@ export default function PaymentPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const orderId = searchParams.get("order_id");
   const bookingId = searchParams.get("booking_id");
 
-  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<PaymentStep>("loading");
   const [booking, setBooking] = useState<Booking | null>(null);
+  // payment_options lives at TOP LEVEL of the API response, not inside booking
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<
-    "idle" | "processing" | "success" | "failed"
-  >("idle");
-  const [paymentMessage, setPaymentMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [selectedProvider, setSelectedProvider] =
+    useState<ProviderChoice | null>(null);
 
   // ============================================================
-  // LOAD BOOKING DETAILS
+  // LOAD BOOKING
   // ============================================================
 
   useEffect(() => {
-    if (!bookingId || !orderId) {
-      setError("Invalid payment link. Missing required parameters.");
-      setLoading(false);
+    if (!bookingId) {
+      setError("Invalid payment link. Missing booking_id parameter.");
+      setStep("failed");
       return;
     }
 
-    const loadBooking = async () => {
+    const load = async () => {
       try {
-        const bookingData = await fetchBookingDetails(bookingId);
-        setBooking(bookingData);
+        // API returns { success, booking, payment_options }
+        // payment_options is TOP LEVEL — not nested inside booking
+        const response = await bookingAPI.getBookingStatus(bookingId);
+        const data = response.booking;
+        const options = response.payment_options ?? [];
 
-        // Validate booking status
-        if (bookingData.status !== "approved") {
+        console.log("[PaymentPage] Booking status:", data.status);
+        console.log("[PaymentPage] Payment options (with converted amounts):", options);
+
+        setBooking(data);
+        setPaymentOptions(options);
+
+        if (data.status !== "approved") {
           setError(
-            `Booking status is "${bookingData.status}". Payment is only available for approved bookings.`
+            `Booking status is "${data.status}". Payment is only available for approved bookings.`
           );
+          setStep("failed");
+          return;
         }
 
-        // Validate payment order
-        if (bookingData.payment_order_id !== orderId) {
-          setError("Payment order mismatch. This link may be invalid or expired.");
+        if (!data.payment_amount) {
+          setError(
+            "Payment amount has not been set yet. Please wait for admin confirmation."
+          );
+          setStep("failed");
+          return;
         }
 
-        setLoading(false);
+        if (options.length === 0) {
+          setError(
+            "No payment methods are available for this booking. Please contact support."
+          );
+          setStep("failed");
+          return;
+        }
+
+        setStep("select");
       } catch (err) {
-        console.error("Failed to load booking:", err);
-        setError("Failed to load booking details. Please check your link and try again.");
-        setLoading(false);
+        console.error("[PaymentPage] Failed to load booking:", err);
+        setError(
+          err instanceof APIError
+            ? err.message
+            : "Failed to load booking details. Please check your link and try again."
+        );
+        setStep("failed");
       }
     };
 
-    loadBooking();
-  }, [bookingId, orderId]);
+    load();
+  }, [bookingId]);
 
   // ============================================================
-  // HANDLE PAYMENT
+  // RAZORPAY HANDLER
   // ============================================================
 
-  const handlePayment = async () => {
-    if (!booking || !orderId || !RAZORPAY_KEY) {
-      setError("Payment configuration error. Please contact support.");
-      return;
-    }
+  const handleRazorpay = useCallback(
+    async (orderData: RazorpayOrderResponse) => {
+      if (!booking || !bookingId) return;
 
-    setPaymentStatus("processing");
-    setPaymentMessage("Initializing secure payment gateway...");
+      setStatusMessage("Loading payment gateway...");
 
-    try {
-      // Load Razorpay SDK
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        throw new Error("Failed to load Razorpay SDK. Please check your internet connection and try again.");
+        throw new Error(
+          "Failed to load Razorpay SDK. Please check your internet connection."
+        );
       }
 
-      setPaymentMessage("Opening payment gateway...");
+      return new Promise<void>((resolve, reject) => {
+        const options = {
+          key: RAZORPAY_KEY,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: "JinniChirag Makeup Artist",
+          description: `${booking.service} - ${booking.package}`,
+          order_id: orderData.order_id,
 
-      const amount = booking.payment_amount || 0;
-      const currency = booking.payment_currency || "INR";
-
-      // Razorpay Checkout Options
-      const options: RazorpayOptions = {
-        key: RAZORPAY_KEY,
-        amount: amount,
-        currency: currency,
-        name: "JinniChirag Makeup Artist",
-        description: `${booking.service} - ${booking.package}`,
-        order_id: orderId,
-
-        // Payment Success Handler
-        handler: async (response: RazorpayResponse) => {
-          console.log("✅ Payment successful:", response.razorpay_payment_id);
-          setPaymentMessage("Verifying payment...");
-
-          try {
-            await verifyPayment(response);
-            
-            setPaymentStatus("success");
-            setPaymentMessage("Payment successful! Your booking is confirmed. 🎉");
-
-            // Redirect to success page after 3 seconds
-            setTimeout(() => {
-              navigate(`/booking-status/${bookingId}`);
-            }, 3000);
-          } catch (err) {
-            console.error("Payment verification failed:", err);
-            setPaymentStatus("failed");
-            setPaymentMessage("Payment verification failed. Please contact support with your payment ID.");
-          }
-        },
-
-        // Prefill customer details
-        prefill: {
-          name: booking.name,
-          email: booking.email,
-          contact: booking.phone,
-        },
-
-        // Theme
-        theme: {
-          color: "#EC4899", // chirag-pink
-        },
-
-        // Modal dismissed handler
-        modal: {
-          ondismiss: async () => {
-            console.log("⚠️ Payment cancelled by user");
-            setPaymentStatus("failed");
-            setPaymentMessage("Payment cancelled. You can try again anytime.");
-
-            await markPaymentFailed(orderId, "User cancelled payment");
+          handler: async (response: RazorpayResponse) => {
+            setStatusMessage("Verifying payment...");
+            try {
+              await paymentAPI.verifyRazorpayPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+              resolve();
+            } catch {
+              reject(
+                new Error(
+                  "Payment verification failed. Please contact support with your payment ID."
+                )
+              );
+            }
           },
-        },
-      };
 
-      // Open Razorpay Checkout
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+          prefill: {
+            name: booking.name,
+            email: booking.email,
+            contact: booking.phone,
+          },
 
-      // Reset status when modal opens
-      setPaymentStatus("idle");
-      setPaymentMessage("");
+          theme: { color: "#EC4899" },
 
-    } catch (err) {
-      console.error("Payment initialization error:", err);
-      setPaymentStatus("failed");
-      
-      if (err instanceof Error) {
-        setPaymentMessage(err.message);
+          modal: {
+            ondismiss: async () => {
+              try {
+                await paymentAPI.markRazorpayFailed({
+                  order_id: orderData.order_id,
+                  reason: "User cancelled payment",
+                });
+              } catch (e) {
+                console.warn("[PaymentPage] Failed to mark Razorpay failed:", e);
+              }
+              reject(new Error("Payment cancelled. You can try again anytime."));
+            },
+          },
+        };
+
+        setStatusMessage("Opening payment gateway...");
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+
+        // Clear processing state while Razorpay modal is open
+        setStep("select");
+        setStatusMessage("");
+      });
+    },
+    [booking, bookingId]
+  );
+
+  // ============================================================
+  // KHALTI HANDLER
+  // ============================================================
+
+  const handleKhalti = useCallback(async (orderData: KhaltiOrderResponse) => {
+    setStatusMessage("Redirecting to Khalti...");
+    // Redirect user to Khalti's hosted payment page.
+    // Khalti will call our return_url (KhaltiCallbackPage) after payment.
+    window.location.href = orderData.payment_url;
+  }, []);
+
+  // ============================================================
+  // MAIN PAY HANDLER
+  // ============================================================
+
+  const handlePay = async (provider: ProviderChoice) => {
+    if (!booking || !bookingId) return;
+
+    setSelectedProvider(provider);
+    setStep("processing");
+    setStatusMessage("Creating payment session...");
+
+    try {
+      // Backend computes amount from admin-set base, returns flat response
+      const orderData = await paymentAPI.createPayment(bookingId, provider);
+      console.log(`[PaymentPage] ${provider} order created:`, orderData);
+
+      if (orderData.provider === "razorpay") {
+        await handleRazorpay(orderData as RazorpayOrderResponse);
+        setStep("success");
+        setStatusMessage("Payment successful! Your booking is confirmed. 🎉");
+        setTimeout(() => navigate(`/booking-status/${bookingId}`), 3000);
       } else {
-        setPaymentMessage("Failed to initialize payment. Please try again.");
+        await handleKhalti(orderData as KhaltiOrderResponse);
+        // Execution does not return here — page navigates to Khalti
       }
+    } catch (err) {
+      console.error("[PaymentPage] Payment error:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Payment failed. Please try again.";
+      setStep("failed");
+      setStatusMessage(message);
     }
   };
 
+  const handleRetry = () => {
+    setStep("select");
+    setSelectedProvider(null);
+    setStatusMessage("");
+    setError(null);
+  };
+
   // ============================================================
-  // LOADING STATE
+  // RENDER: LOADING
   // ============================================================
 
-  if (loading) {
+  if (step === "loading") {
     return (
-      <div className="min-h-screen flex flex-col bg-white">
-        <Navbar />
-        <main className="flex-grow flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin mx-auto text-chirag-pink" />
             <p className="text-gray-600 font-medium">Loading payment details...</p>
           </div>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   // ============================================================
-  // ERROR STATE
+  // RENDER: HARD ERROR (before any payment attempt)
   // ============================================================
 
-  if (error || !booking) {
+  if (step === "failed" && !selectedProvider) {
     return (
-      <div className="min-h-screen flex flex-col bg-white">
-        <Navbar />
-        <main className="flex-grow flex items-center justify-center px-4">
-          <div className="max-w-md w-full text-center space-y-4">
-            <div className="mx-auto w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
-              <XCircle className="h-10 w-10 text-red-500" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-playfair font-bold text-gray-900">
-              Payment Error
-            </h2>
-            <p className="text-gray-600">{error}</p>
+      <PageShell>
+        <div className="max-w-md mx-auto text-center space-y-6 py-16">
+          <div className="mx-auto w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
+            <XCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-playfair font-bold text-gray-900">
+            Payment Error
+          </h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => navigate("/")}
+            className="px-8 py-3 bg-gradient-to-r from-chirag-pink to-pink-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            Go to Home
+          </button>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (!booking) return null;
+
+  // ============================================================
+  // RENDER: PROCESSING
+  // ============================================================
+
+  if (step === "processing") {
+    return (
+      <PageShell>
+        <div className="max-w-md mx-auto text-center space-y-6 py-16">
+          <Loader2 className="h-14 w-14 animate-spin mx-auto text-chirag-pink" />
+          <h2 className="text-xl font-semibold text-gray-800">
+            {statusMessage || "Processing payment..."}
+          </h2>
+          <p className="text-sm text-gray-500">
+            Please do not close or refresh this page.
+          </p>
+        </div>
+      </PageShell>
+    );
+  }
+
+  // ============================================================
+  // RENDER: SUCCESS
+  // ============================================================
+
+  if (step === "success") {
+    return (
+      <PageShell>
+        <div className="max-w-md mx-auto text-center space-y-6 py-16">
+          <div className="mx-auto w-20 h-20 rounded-full bg-green-50 flex items-center justify-center">
+            <CheckCircle2 className="h-10 w-10 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-playfair font-bold text-gray-900">
+            Payment Successful!
+          </h2>
+          <p className="text-gray-600">{statusMessage}</p>
+          <p className="text-sm text-gray-400">
+            Redirecting to your booking status...
+          </p>
+        </div>
+      </PageShell>
+    );
+  }
+
+  // ============================================================
+  // RENDER: PAYMENT FAILED (after attempting payment)
+  // ============================================================
+
+  if (step === "failed" && selectedProvider) {
+    return (
+      <PageShell>
+        <div className="max-w-md mx-auto text-center space-y-6 py-16">
+          <div className="mx-auto w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
+            <XCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-playfair font-bold text-gray-900">
+            Payment Failed
+          </h2>
+          <p className="text-gray-600">{statusMessage}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate("/")}
-              className="mt-6 px-8 py-3 bg-gradient-to-r from-chirag-pink to-pink-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              onClick={handleRetry}
+              className="px-8 py-3 bg-gradient-to-r from-chirag-pink to-pink-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
             >
-              Go to Home
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate(`/booking-status/${bookingId}`)}
+              className="px-8 py-3 bg-white text-gray-700 border border-gray-300 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+            >
+              View Booking
             </button>
           </div>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   // ============================================================
-  // MAIN PAYMENT PAGE
+  // RENDER: PROVIDER SELECTION
   // ============================================================
 
-  const amount = (booking.payment_amount || 0) / 100;
-  const formattedAmount = amount.toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const hasMultipleProviders = paymentOptions.length > 1;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white via-pink-50/30 to-pink-100/50">
-      <Navbar />
+    <PageShell>
+      <div className="max-w-3xl mx-auto space-y-6 py-8 sm:py-12 px-4 sm:px-6">
 
-      <main className="flex-grow w-full py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto space-y-6">
-          
-          {/* Header */}
-          <div className="text-center space-y-3">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-chirag-pink to-pink-400 shadow-xl">
-              <CreditCard className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-playfair font-bold text-gray-900">
-              Complete Payment
-            </h1>
-            <p className="text-gray-600 flex items-center justify-center gap-2">
-              <Shield className="h-4 w-4" />
-              Secure payment powered by Razorpay
-            </p>
+        {/* Header */}
+        <div className="text-center space-y-3">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-chirag-pink to-pink-400 shadow-xl">
+            <CreditCard className="h-8 w-8 text-white" />
           </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-playfair font-bold text-gray-900">
+            Complete Payment
+          </h1>
+          <p className="text-gray-500 flex items-center justify-center gap-2 text-sm">
+            <Shield className="h-4 w-4" />
+            Secure payment via trusted providers
+          </p>
+        </div>
 
-          {/* Status Messages */}
-          {paymentStatus === "processing" && (
-            <div className="rounded-2xl bg-blue-50 border-2 border-blue-200 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-600 flex-shrink-0" />
-                <span className="text-blue-900 font-medium">{paymentMessage}</span>
-              </div>
-            </div>
-          )}
-
-          {paymentStatus === "success" && (
-            <div className="rounded-2xl bg-green-50 border-2 border-green-200 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
-                <span className="text-green-900 font-medium">{paymentMessage}</span>
-              </div>
-            </div>
-          )}
-
-          {paymentStatus === "failed" && (
-            <div className="rounded-2xl bg-red-50 border-2 border-red-200 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-                <span className="text-red-900 font-medium">{paymentMessage}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Amount Card - Prominent */}
-          <div className="bg-gradient-to-br from-chirag-pink to-pink-500 rounded-3xl shadow-2xl p-6 sm:p-8 text-white">
-            <p className="text-white/90 text-sm sm:text-base font-medium mb-2">Total Amount</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl sm:text-6xl lg:text-7xl font-bold">₹{formattedAmount.split('.')[0]}</span>
-              <span className="text-2xl sm:text-3xl font-semibold">.{formattedAmount.split('.')[1]}</span>
-            </div>
-            <p className="text-white/80 text-sm mt-2">{booking.payment_currency || 'INR'}</p>
+        {/* Booking Summary */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+          <div className="bg-gradient-to-r from-gray-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">Booking Summary</h2>
           </div>
-
-          {/* Booking Details Card */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-            <div className="bg-gradient-to-r from-gray-50 to-pink-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Booking Details</h2>
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SummaryItem label="Name" value={booking.name} />
+              <SummaryItem label="Email" value={booking.email} />
+              <SummaryItem label="Phone" value={booking.phone} />
+              <SummaryItem
+                label="Date"
+                value={new Date(booking.date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              />
+              <SummaryItem label="Service" value={booking.service} />
+              <SummaryItem label="Package" value={booking.package} />
+              <SummaryItem
+                label="Location"
+                value={`${booking.address}, ${booking.pincode}`}
+                className="sm:col-span-2"
+              />
             </div>
-
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DetailItem label="Name" value={booking.name} />
-                <DetailItem label="Email" value={booking.email} />
-                <DetailItem label="Phone" value={booking.phone} />
-                <DetailItem 
-                  label="Date" 
-                  value={new Date(booking.date).toLocaleDateString('en-IN', { 
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })} 
-                />
-                <DetailItem label="Service" value={booking.service} />
-                <DetailItem label="Package" value={booking.package} />
-                <DetailItem 
-                  label="Location" 
-                  value={`${booking.address}, ${booking.pincode}`} 
-                  className="sm:col-span-2"
-                />
-                <DetailItem label="Country" value={booking.service_country} />
-              </div>
-
-              {booking.message && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Special Notes:</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{booking.message}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Payment Methods Info */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <div className="flex items-start gap-3 mb-4">
-              <Shield className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-bold text-gray-900 mb-1">Secure Payment</h3>
-                <p className="text-sm text-gray-600">
-                  Your payment is processed securely through Razorpay with 256-bit encryption
+            {booking.message && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Notes
+                </p>
+                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  {booking.message}
                 </p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-              <PaymentMethodBadge icon={Smartphone} label="UPI" />
-              <PaymentMethodBadge icon={CreditCard} label="Cards" />
-              <PaymentMethodBadge icon={Building2} label="Net Banking" />
-              <PaymentMethodBadge icon={Wallet} label="Wallets" />
-            </div>
-          </div>
-
-          {/* Payment Button */}
-          <button
-            onClick={handlePayment}
-            disabled={paymentStatus === "processing" || paymentStatus === "success"}
-            className="w-full group relative overflow-hidden bg-gradient-to-r from-chirag-pink via-pink-500 to-pink-600 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-pink-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-2xl py-5 sm:py-6"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-chirag-pink opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <div className="relative flex items-center justify-center gap-3">
-              {paymentStatus === "processing" ? (
-                <>
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : paymentStatus === "success" ? (
-                <>
-                  <CheckCircle2 className="h-6 w-6" />
-                  <span>Payment Successful</span>
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-6 w-6" />
-                  <span>Pay ₹{formattedAmount}</span>
-                  <ChevronRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </div>
-          </button>
-
-          {/* Footer Info */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <Clock className="h-4 w-4" />
-              <span>This payment link is valid until you complete the payment</span>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <AlertCircle className="h-4 w-4" />
-              <span>
-                Need help? Contact us at{" "}
-                <a href="mailto:support@jinnichirag.com" className="text-chirag-pink hover:underline">
-                  support@jinnichirag.com
-                </a>
-              </span>
-            </div>
+            )}
           </div>
         </div>
-      </main>
 
-      <Footer />
-    </div>
+        {/* Provider Selection */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+          <div className="bg-gradient-to-r from-gray-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">
+              {hasMultipleProviders ? "Choose Payment Method" : "Payment Method"}
+            </h2>
+            {hasMultipleProviders && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                Select your preferred payment provider
+              </p>
+            )}
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/*
+              ✅ Each option.amount is the CONVERTED amount in option.currency.
+              Backend computed these conversions — frontend just displays them.
+              Never use booking.payment_amount here.
+            */}
+            {paymentOptions.map((option) => (
+              <ProviderCard
+                key={option.provider}
+                provider={option.provider}
+                currency={option.currency}
+                label={
+                  option.label ??
+                  (option.provider === "razorpay" ? "Razorpay" : "Khalti")
+                }
+                description={
+                  option.description ??
+                  (option.provider === "razorpay"
+                    ? "Pay via UPI, Cards, Net Banking, Wallets"
+                    : "Pay via Khalti Wallet, eBanking, Cards")
+                }
+                // ✅ CORRECT: use option.amount (backend-converted for this provider)
+                // ❌ WRONG was: formatCurrency(baseAmount, option.currency)
+                formattedAmount={formatCurrency(option.amount, option.currency)}
+                onPay={() => handlePay(option.provider)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="space-y-2 pb-4">
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+            <Clock className="h-3.5 w-3.5" />
+            <span>
+              Khalti payment links expire in 60 minutes. Complete payment promptly.
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <span>
+              Need help?{" "}
+              <a
+                href="mailto:support@jinnichirag.com"
+                className="text-chirag-pink hover:underline"
+              >
+                support@jinnichirag.com
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </PageShell>
   );
 }
+
+// ============================================================
+// PROVIDER CARD
+// ============================================================
+
+const ProviderCard = ({
+  provider,
+  currency,
+  label,
+  description,
+  formattedAmount,
+  onPay,
+}: {
+  provider: "razorpay" | "khalti";
+  currency: string;
+  label: string;
+  description: string;
+  /** Pre-formatted amount string using the provider's own currency */
+  formattedAmount: string;
+  onPay: () => void;
+}) => {
+  const isRazorpay = provider === "razorpay";
+
+  return (
+    <div className="rounded-2xl border-2 border-gray-200 hover:border-chirag-pink/40 transition-colors overflow-hidden">
+      {/* Provider Header */}
+      <div
+        className={`px-5 py-3 flex items-center gap-3 ${
+          isRazorpay
+            ? "bg-blue-50 border-b border-blue-100"
+            : "bg-purple-50 border-b border-purple-100"
+        }`}
+      >
+        <div
+          className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
+            isRazorpay ? "bg-blue-600" : "bg-purple-600"
+          }`}
+        >
+          {isRazorpay ? "R" : "K"}
+        </div>
+        <div>
+          <p className="font-bold text-gray-900 text-sm">{label}</p>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+        <div className="ml-auto">
+          <span
+            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              isRazorpay
+                ? "bg-blue-100 text-blue-700"
+                : "bg-purple-100 text-purple-700"
+            }`}
+          >
+            {currency}
+          </span>
+        </div>
+      </div>
+
+      {/* Payment Methods Row */}
+      <div className="px-5 py-3 bg-white flex flex-wrap items-center gap-2 border-b border-gray-100">
+        {isRazorpay ? (
+          <>
+            <PayMethodBadge icon={Smartphone} label="UPI" />
+            <PayMethodBadge icon={CreditCard} label="Cards" />
+            <PayMethodBadge icon={Building2} label="Net Banking" />
+            <PayMethodBadge icon={Wallet} label="Wallets" />
+          </>
+        ) : (
+          <>
+            <PayMethodBadge icon={Wallet} label="Khalti Wallet" />
+            <PayMethodBadge icon={Building2} label="eBanking" />
+            <PayMethodBadge icon={CreditCard} label="Cards" />
+          </>
+        )}
+      </div>
+
+      {/* Pay Button */}
+      <div className="px-5 py-4 bg-white">
+        <button
+          onClick={onPay}
+          className={`w-full group flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-bold text-white text-base shadow-lg hover:shadow-xl transition-all ${
+            isRazorpay
+              ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+              : "bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600"
+          }`}
+        >
+          {isRazorpay ? (
+            <CreditCard className="h-5 w-5" />
+          ) : (
+            <Wallet className="h-5 w-5" />
+          )}
+          <span>Pay {formattedAmount}</span>
+          <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // ============================================================
 // HELPER COMPONENTS
 // ============================================================
 
-const DetailItem = ({ 
-  label, 
-  value, 
-  className = "" 
-}: { 
-  label: string; 
-  value: string; 
-  className?: string;
-}) => (
-  <div className={className}>
-    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-      {label}
-    </p>
-    <p className="text-sm sm:text-base text-gray-900 font-medium break-words">
-      {value}
-    </p>
+const PageShell = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen flex flex-col bg-gradient-to-b from-white via-pink-50/30 to-pink-100/50">
+    <Navbar />
+    <main className="flex-grow w-full">{children}</main>
+    <Footer />
   </div>
 );
 
-const PaymentMethodBadge = ({ 
-  icon: Icon, 
-  label 
-}: { 
-  icon: React.ElementType; 
+const SummaryItem = ({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) => (
+  <div className={className}>
+    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+      {label}
+    </p>
+    <p className="text-sm text-gray-900 font-medium break-words">{value}</p>
+  </div>
+);
+
+const PayMethodBadge = ({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ElementType;
   label: string;
 }) => (
-  <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-chirag-pink/50 transition-colors">
-    <Icon className="h-6 w-6 text-gray-600" />
-    <span className="text-xs font-semibold text-gray-700">{label}</span>
+  <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-200">
+    <Icon className="h-3 w-3" />
+    <span>{label}</span>
   </div>
 );

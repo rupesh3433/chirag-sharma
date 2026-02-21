@@ -15,7 +15,7 @@ import {
   Mail,
   Phone,
   CreditCard,
-  DollarSign,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@shared/components/ui/button";
 import { Input } from "@shared/components/ui/input";
@@ -48,11 +48,60 @@ import StatusBadge from "../components/bookings/StatusBadge";
 import PaymentStatusBadge from "../components/bookings/PaymentStatusBadge";
 import BookingDetailsModal from "../components/bookings/BookingDetailsModal";
 import { bookingsApi } from "../services/api";
-import { Booking, BookingStatus, PaymentStatus } from "../types";
+import { Booking, BookingStatus, PaymentStatus, PaymentProvider } from "../types";
 import { format } from "date-fns";
 import { useToast } from "@/shared/hooks/use-toast";
 
 const ITEMS_PER_PAGE = 20;
+
+// ============================================================
+// PROVIDER BADGE
+// ============================================================
+
+const ProviderBadge = ({
+  provider,
+}: {
+  provider: PaymentProvider;
+}) => {
+  if (!provider) return <span className="text-muted-foreground text-xs">—</span>;
+
+  const isKhalti = provider === "khalti";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+        isKhalti
+          ? "bg-purple-100 text-purple-700"
+          : "bg-blue-100 text-blue-700"
+      }`}
+    >
+      {isKhalti ? (
+        <Wallet className="h-3 w-3" />
+      ) : (
+        <CreditCard className="h-3 w-3" />
+      )}
+      {isKhalti ? "Khalti" : "Razorpay"}
+    </span>
+  );
+};
+
+// ============================================================
+// CURRENCY-AWARE AMOUNT FORMATTER
+// ============================================================
+
+const formatPaymentAmount = (
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+  provider: PaymentProvider
+) => {
+  if (!amount) return "—";
+  const val = (amount / 100).toFixed(2);
+  if (currency === "NPR") return `NPR ${val}`;
+  return `₹${val}`;
+};
+
+// ============================================================
+// BOOKINGS PAGE
+// ============================================================
 
 const Bookings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,29 +131,18 @@ const Bookings = () => {
   );
   const { toast } = useToast();
 
-  // Update URL params when filters change
+  // Sync filters → URL params
   useEffect(() => {
     const params: Record<string, string> = {};
-
     if (searchQuery) params.search = searchQuery;
     if (statusFilter !== "all") params.status = statusFilter;
     if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter;
     if (dateFrom) params.from = dateFrom;
     if (dateTo) params.to = dateTo;
     if (currentPage > 1) params.page = currentPage.toString();
-
     setSearchParams(params, { replace: true });
-  }, [
-    searchQuery,
-    statusFilter,
-    paymentStatusFilter,
-    dateFrom,
-    dateTo,
-    currentPage,
-    setSearchParams,
-  ]);
+  }, [searchQuery, statusFilter, paymentStatusFilter, dateFrom, dateTo, currentPage, setSearchParams]);
 
-  // Persist filter visibility on mobile
   useEffect(() => {
     localStorage.setItem("bookings_show_filters", showFilters.toString());
   }, [showFilters]);
@@ -112,21 +150,22 @@ const Bookings = () => {
   const fetchBookings = useCallback(async () => {
     setIsLoading(true);
     const skip = (currentPage - 1) * ITEMS_PER_PAGE;
-
     try {
       const response = await bookingsApi.search({
         search: searchQuery || undefined,
         status: statusFilter !== "all" ? (statusFilter as BookingStatus) : undefined,
-        payment_status: paymentStatusFilter !== "all" ? (paymentStatusFilter as PaymentStatus) : undefined,
+        payment_status:
+          paymentStatusFilter !== "all"
+            ? (paymentStatusFilter as PaymentStatus)
+            : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         limit: ITEMS_PER_PAGE,
         skip,
       });
-
       setBookings(response.data.bookings);
       setTotalCount(response.data.total);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load bookings.",
@@ -155,7 +194,7 @@ const Bookings = () => {
     setCurrentPage(1);
   };
 
-  const handleViewDetails = async (booking: Booking) => {
+  const handleViewDetails = (booking: Booking) => {
     setSelectedBooking(booking);
     setIsDetailsOpen(true);
   };
@@ -163,10 +202,8 @@ const Bookings = () => {
   const handleDeleteBooking = async () => {
     if (!deleteBookingId) return;
 
-    const booking = bookings.find(b => b._id === deleteBookingId);
-    
-    // Check if booking is paid
-    if (booking?.payment_status === 'paid') {
+    const booking = bookings.find((b) => b._id === deleteBookingId);
+    if (booking?.payment_status === "paid") {
       toast({
         title: "Cannot Delete",
         description: "Cannot delete a paid booking. Please process a refund first.",
@@ -178,10 +215,7 @@ const Bookings = () => {
 
     try {
       await bookingsApi.delete(deleteBookingId);
-      toast({
-        title: "Deleted",
-        description: "Booking deleted successfully.",
-      });
+      toast({ title: "Deleted", description: "Booking deleted successfully." });
       fetchBookings();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } };
@@ -195,19 +229,13 @@ const Bookings = () => {
     }
   };
 
-  const handleStatusUpdate = () => {
-    fetchBookings();
-  };
-
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const hasActiveFilters =
-    searchQuery || statusFilter !== "all" || paymentStatusFilter !== "all" || dateFrom || dateTo;
-
-  // Helper to format payment amount
-  const formatPaymentAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
-    if (!amount) return '-';
-    return `₹${(amount / 100).toFixed(2)} ${currency || ''}`;
-  };
+    searchQuery ||
+    statusFilter !== "all" ||
+    paymentStatusFilter !== "all" ||
+    dateFrom ||
+    dateTo;
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -236,22 +264,18 @@ const Bookings = () => {
             size="sm"
             className="gap-2"
           >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
 
-      {/* Filters - Desktop always visible, Mobile toggleable */}
+      {/* Filters */}
       <div
-        className={`bg-card rounded-xl border p-4 ${
-          !showFilters ? "hidden md:block" : ""
-        }`}
+        className={`bg-card rounded-xl border p-4 ${!showFilters ? "hidden md:block" : ""}`}
       >
         <div className="space-y-3">
-          {/* Row 1: Search (full width) */}
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
@@ -263,7 +287,7 @@ const Bookings = () => {
             />
           </div>
 
-          {/* Row 2: Status Filters, Date Range */}
+          {/* Filter Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
@@ -288,7 +312,10 @@ const Bookings = () => {
               <label className="text-xs font-medium text-muted-foreground">
                 Payment Status
               </label>
-              <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <Select
+                value={paymentStatusFilter}
+                onValueChange={setPaymentStatusFilter}
+              >
                 <SelectTrigger className="h-10">
                   <SelectValue placeholder="All Payments" />
                 </SelectTrigger>
@@ -329,39 +356,22 @@ const Bookings = () => {
             </div>
           </div>
 
-          {/* Row 3: Action Buttons */}
+          {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleSearch}
               size="sm"
-              className="
-                h-10
-                gradient-primary
-                text-white
-                shadow-rose
-                [&_svg]:text-white
-                [&_svg]:stroke-white
-                hover:opacity-90
-                transition-opacity
-              "
+              className="h-10 gradient-primary text-white shadow-rose [&_svg]:text-white [&_svg]:stroke-white hover:opacity-90 transition-opacity"
             >
               <Filter className="h-4 w-4 mr-2" />
               Apply Filters
             </Button>
-
             {hasActiveFilters && (
               <Button
                 onClick={handleClearFilters}
                 size="sm"
                 variant="outline"
-                className="
-                  h-10
-                  border-destructive/30
-                  text-destructive
-                  hover:bg-destructive/10
-                  hover:text-destructive
-                  transition-colors
-                "
+                className="h-10 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear All
@@ -371,7 +381,9 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* Desktop Table */}
+      {/* ============================================================ */}
+      {/* DESKTOP TABLE                                                  */}
+      {/* ============================================================ */}
       <div className="hidden lg:block bg-card rounded-xl border overflow-x-auto">
         <Table>
           <TableHeader>
@@ -382,6 +394,7 @@ const Bookings = () => {
               <TableHead className="w-28">Date</TableHead>
               <TableHead className="w-32">Booking</TableHead>
               <TableHead className="w-36">Payment</TableHead>
+              <TableHead className="w-28">Provider</TableHead>
               <TableHead className="w-32">Amount</TableHead>
               <TableHead className="w-28">Created</TableHead>
               <TableHead className="text-right w-28">Actions</TableHead>
@@ -390,7 +403,7 @@ const Bookings = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-10">
+                <TableCell colSpan={10} className="text-center py-10">
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     <span>Loading...</span>
@@ -400,7 +413,7 @@ const Bookings = () => {
             ) : bookings.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="text-center py-10 text-muted-foreground"
                 >
                   No bookings found
@@ -424,7 +437,7 @@ const Bookings = () => {
                     <div className="min-w-0">
                       <p className="font-medium truncate">{b.service}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {b.package || "-"}
+                        {b.package || "—"}
                       </p>
                     </div>
                   </TableCell>
@@ -436,9 +449,16 @@ const Bookings = () => {
                     <PaymentStatusBadge status={b.payment_status} />
                   </TableCell>
                   <TableCell>
+                    <ProviderBadge provider={b.payment_provider ?? null} />
+                  </TableCell>
+                  <TableCell>
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">
-                        {formatPaymentAmount(b.payment_amount, b.payment_currency)}
+                        {formatPaymentAmount(
+                          b.payment_amount,
+                          b.payment_currency,
+                          b.payment_provider ?? null
+                        )}
                       </p>
                       {b.payment_method && (
                         <p className="text-xs text-muted-foreground capitalize">
@@ -465,8 +485,12 @@ const Bookings = () => {
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setDeleteBookingId(b._id)}
-                        disabled={b.payment_status === 'paid'}
-                        title={b.payment_status === 'paid' ? "Cannot delete paid booking" : "Delete booking"}
+                        disabled={b.payment_status === "paid"}
+                        title={
+                          b.payment_status === "paid"
+                            ? "Cannot delete paid booking"
+                            : "Delete booking"
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -479,7 +503,9 @@ const Bookings = () => {
         </Table>
       </div>
 
-      {/* Mobile/Tablet Card View */}
+      {/* ============================================================ */}
+      {/* MOBILE / TABLET CARD VIEW                                      */}
+      {/* ============================================================ */}
       <div className="lg:hidden space-y-3">
         {isLoading ? (
           <div className="text-center py-10">
@@ -498,7 +524,7 @@ const Bookings = () => {
               className="bg-card rounded-lg border p-3 sm:p-4 space-y-3 hover:border-primary/50 transition-colors"
               onClick={() => handleViewDetails(b)}
             >
-              {/* Header */}
+              {/* Card Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -515,17 +541,26 @@ const Bookings = () => {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <StatusBadge status={b.status} className="flex-shrink-0" />
-                  <PaymentStatusBadge status={b.payment_status} className="flex-shrink-0" />
+                  <PaymentStatusBadge
+                    status={b.payment_status}
+                    className="flex-shrink-0"
+                  />
                 </div>
               </div>
 
-              {/* Payment Amount (if exists) */}
+              {/* Amount + Provider */}
               {b.payment_amount && (
                 <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                  <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-shrink-0">
+                    <ProviderBadge provider={b.payment_provider ?? null} />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium">
-                      {formatPaymentAmount(b.payment_amount, b.payment_currency)}
+                    <p className="font-medium text-sm">
+                      {formatPaymentAmount(
+                        b.payment_amount,
+                        b.payment_currency,
+                        b.payment_provider ?? null
+                      )}
                     </p>
                     {b.payment_method && (
                       <p className="text-xs text-muted-foreground capitalize">
@@ -578,7 +613,7 @@ const Bookings = () => {
                     e.stopPropagation();
                     setDeleteBookingId(b._id);
                   }}
-                  disabled={b.payment_status === 'paid'}
+                  disabled={b.payment_status === "paid"}
                 >
                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
@@ -592,7 +627,7 @@ const Bookings = () => {
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-3 sm:p-4 bg-card rounded-xl border">
           <p className="text-xs sm:text-sm text-muted-foreground">
-            {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+            {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
             {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount}
           </p>
           <div className="flex items-center gap-2">
@@ -628,7 +663,7 @@ const Bookings = () => {
           setIsDetailsOpen(false);
           setSelectedBooking(null);
         }}
-        onStatusUpdate={handleStatusUpdate}
+        onStatusUpdate={() => fetchBookings()}
         onRefresh={fetchBookings}
       />
 
@@ -640,8 +675,7 @@ const Bookings = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Booking?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The booking will be permanently
-              deleted.
+              This action cannot be undone. The booking will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">

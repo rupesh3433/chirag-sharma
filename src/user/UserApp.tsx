@@ -15,6 +15,7 @@ import Portfolio from "./pages/PortfolioPage";
 import Services from "./pages/ServicesPage";
 import Book from "./pages/BookPage";
 import PaymentPage from "./pages/PaymentPage";
+import KhaltiCallbackPage from "./pages/KhaltiCallbackPage";
 import BookingStatusPage from "./pages/BookingStatusPage";
 import NotFound from "./pages/NotFound";
 
@@ -43,7 +44,20 @@ const UserApp = () => {
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="book" element={<Book />} />
-            <Route path="payment" element={<PaymentPage />} />
+
+            {/* Payment flow:
+                1. User lands here after admin approves (from WhatsApp link)
+                   URL: /payment?booking_id=xxx
+                2. User selects provider → Razorpay opens in modal OR Khalti redirects out
+            */}
+            <Route path="payment-options" element={<PaymentPage />} />
+
+            {/* Khalti return URL — Khalti redirects back here after payment attempt
+                URL: /payment/khalti-callback?booking_id=xxx&pidx=...&status=Completed&...
+                Configure KHALTI_RETURN_URL in backend as: {FRONTEND_URL}/payment/khalti-callback
+            */}
+            <Route path="payment/khalti-callback" element={<KhaltiCallbackPage />} />
+
             <Route path="booking-status/:bookingId" element={<BookingStatusPage />} />
             <Route path="about" element={<About />} />
             <Route path="*" element={<NotFound />} />

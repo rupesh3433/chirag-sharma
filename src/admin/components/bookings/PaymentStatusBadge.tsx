@@ -8,13 +8,18 @@ interface PaymentStatusBadgeProps {
 const PaymentStatusBadge = ({ status, className = '' }: PaymentStatusBadgeProps) => {
   if (!status) {
     return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ${className}`}>
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ${className}`}
+      >
         No Payment
       </span>
     );
   }
 
-  const styles: Record<Exclude<PaymentStatus, null>, { bg: string; text: string; label: string }> = {
+  const styles: Record<
+    Exclude<PaymentStatus, null>,
+    { bg: string; text: string; label: string }
+  > = {
     pending: {
       bg: 'bg-gray-100',
       text: 'text-gray-700',
@@ -50,7 +55,9 @@ const PaymentStatusBadge = ({ status, className = '' }: PaymentStatusBadgeProps)
   const style = styles[status];
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text} ${className}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text} ${className}`}
+    >
       {style.label}
     </span>
   );

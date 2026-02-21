@@ -1,4 +1,9 @@
-// ==========================================================
+// src/types/index.ts
+
+
+
+
+// // ==========================================================
 // ADMIN TYPES
 // ==========================================================
 
@@ -30,17 +35,21 @@ export type PaymentStatus =
 export type PaymentProvider = "razorpay" | "khalti" | null;
 
 // ==========================================================
-// PAYMENT DETAILS TYPE
+// PAYMENT DETAILS TYPE — MULTI-PROVIDER
 // ==========================================================
 
 export interface PaymentDetails {
   _id: string;
   booking_id: string;
-  provider: "razorpay";
-  order_id: string;
-  payment_id: string | null;
-  amount: number;
-  currency: string;
+
+  // Provider identifier
+  provider: PaymentProvider;       // "razorpay" | "khalti"
+
+  // Shared fields
+  order_id: string;                // Razorpay order_id / Khalti purchase_order_id
+  payment_id: string | null;       // Razorpay payment_id / Khalti transaction_id
+  amount: number;                  // In paise / paisa
+  currency: string;                // "INR" | "NPR"
   method?: string | null;
   status: PaymentStatus;
   fee?: number;
@@ -55,6 +64,12 @@ export interface PaymentDetails {
   created_at: string;
   processed_at?: string | null;
   updated_at?: string | null;
+
+  // Khalti-specific fields
+  pidx?: string | null;            // Khalti payment identifier
+  payment_url?: string | null;     // Khalti checkout URL
+  purchase_order_id?: string | null;
+  expires_at?: string | null;
 }
 
 export interface RefundRecord {
@@ -65,7 +80,7 @@ export interface RefundRecord {
 }
 
 // ==========================================================
-// BOOKING TYPE (UPDATED)
+// BOOKING TYPE — MULTI-PROVIDER
 // ==========================================================
 
 export interface Booking {
@@ -91,13 +106,14 @@ export interface Booking {
 
   status: BookingStatus;
 
-  // 🔥 Payment fields
+  // Payment fields
   payment_status: PaymentStatus;
-  payment_provider?: PaymentProvider;
+  payment_provider?: PaymentProvider;    // "razorpay" | "khalti" | null
   payment_order_id?: string | null;
+  payment_pidx?: string | null;          // Khalti pidx
   payment_id?: string | null;
-  payment_amount?: number | null;
-  payment_currency?: string | null;
+  payment_amount?: number | null;        // In paise / paisa (set by admin on approval)
+  payment_currency?: string | null;      // "INR" | "NPR"
   payment_method?: string | null;
   payment_completed_at?: string | null;
 
@@ -109,7 +125,7 @@ export interface Booking {
   updated_at?: string;
   updated_by?: string;
 
-  // Admin-only populated field
+  // Admin-only populated field (from GET /admin/bookings/{id})
   payment_details?: PaymentDetails;
 }
 
@@ -301,6 +317,7 @@ export interface RefundResponse {
     amount_refunded: number;
     total_refunded: number;
     status: PaymentStatus;
+    provider?: PaymentProvider;
   };
 }
 
@@ -321,6 +338,19 @@ export interface PaymentAnalytics {
   method_breakdown: Record<string, number>;
   status_breakdown: Record<string, number>;
   average_transaction: number;
+  // Per-provider breakdown (multi-provider analytics)
+  razorpay?: {
+    total_revenue: number;
+    total_transactions: number;
+    net_revenue: number;
+    currency: string;
+  };
+  khalti?: {
+    total_revenue: number;
+    total_transactions: number;
+    net_revenue: number;
+    currency: string;
+  };
 }
 
 export interface PaymentAnalyticsResponse {
@@ -333,12 +363,13 @@ export interface PaymentAnalyticsResponse {
 // ==========================================================
 
 export interface ApprovalFormData {
-  payment_amount: number; // in paise
+  payment_amount: number; // in paise / paisa
 }
 
 export interface RefundFormData {
-  amount?: number; // in paise, undefined = full refund
+  amount?: number;   // in paise / paisa, undefined = full refund
   reason: string;
+  mobile?: string;   // Khalti bank refund: requires mobile number
 }
 
 export interface CancelFormData {
