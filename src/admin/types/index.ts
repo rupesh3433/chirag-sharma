@@ -1,9 +1,6 @@
 // src/types/index.ts
 
-
-
-
-// // ==========================================================
+// ==========================================================
 // ADMIN TYPES
 // ==========================================================
 
@@ -41,15 +38,11 @@ export type PaymentProvider = "razorpay" | "khalti" | null;
 export interface PaymentDetails {
   _id: string;
   booking_id: string;
-
-  // Provider identifier
-  provider: PaymentProvider;       // "razorpay" | "khalti"
-
-  // Shared fields
-  order_id: string;                // Razorpay order_id / Khalti purchase_order_id
-  payment_id: string | null;       // Razorpay payment_id / Khalti transaction_id
-  amount: number;                  // In paise / paisa
-  currency: string;                // "INR" | "NPR"
+  provider: PaymentProvider;
+  order_id: string;
+  payment_id: string | null;
+  amount: number;
+  currency: string;
   method?: string | null;
   status: PaymentStatus;
   fee?: number;
@@ -64,10 +57,9 @@ export interface PaymentDetails {
   created_at: string;
   processed_at?: string | null;
   updated_at?: string | null;
-
-  // Khalti-specific fields
-  pidx?: string | null;            // Khalti payment identifier
-  payment_url?: string | null;     // Khalti checkout URL
+  // Khalti-specific
+  pidx?: string | null;
+  payment_url?: string | null;
   purchase_order_id?: string | null;
   expires_at?: string | null;
 }
@@ -80,52 +72,39 @@ export interface RefundRecord {
 }
 
 // ==========================================================
-// BOOKING TYPE — MULTI-PROVIDER
+// BOOKING TYPE — MULTI-PROVIDER (service bookings)
 // ==========================================================
 
 export interface Booking {
   _id: string;
-
   service: string;
   package: string;
-
   name: string;
   email: string;
   phone: string;
-
   phone_country: string;
   service_country: string;
-
   address: string;
   pincode: string;
   date: string;
-
   message?: string;
-
   otp_verified: boolean;
-
   status: BookingStatus;
-
-  // Payment fields
   payment_status: PaymentStatus;
-  payment_provider?: PaymentProvider;    // "razorpay" | "khalti" | null
+  payment_provider?: PaymentProvider;
   payment_order_id?: string | null;
-  payment_pidx?: string | null;          // Khalti pidx
+  payment_pidx?: string | null;
   payment_id?: string | null;
-  payment_amount?: number | null;        // In paise / paisa (set by admin on approval)
-  payment_currency?: string | null;      // "INR" | "NPR"
+  payment_amount?: number | null;
+  payment_currency?: string | null;
   payment_method?: string | null;
   payment_completed_at?: string | null;
-
   cancellation_reason?: string;
   cancelled_by?: string;
   cancelled_at?: string;
-
   created_at: string;
   updated_at?: string;
   updated_by?: string;
-
-  // Admin-only populated field (from GET /admin/bookings/{id})
   payment_details?: PaymentDetails;
 }
 
@@ -154,12 +133,10 @@ export interface Analytics {
   confirmed_bookings: number;
   completed_bookings: number;
   cancelled_bookings: number;
-
   total_revenue?: number;
   total_transactions?: number;
   total_refunded?: number;
   net_revenue?: number;
-
   otp_pending?: number;
   recent_bookings_7_days?: number;
   today_bookings?: number;
@@ -227,10 +204,7 @@ export interface Event {
   time_from: string;
   time_to: string;
   location: string;
-  location_coords: {
-    lat: number;
-    lng: number;
-  };
+  location_coords: { lat: number; lng: number };
   total_seats: number;
   price_details: PriceCategory[];
   main_poster_url: string;
@@ -257,10 +231,7 @@ export interface CreateEventDto {
   time_from: string;
   time_to: string;
   location: string;
-  location_coords: {
-    lat: number;
-    lng: number;
-  };
+  location_coords: { lat: number; lng: number };
   total_seats: number;
   price_details: PriceCategory[];
   is_active?: boolean;
@@ -275,10 +246,7 @@ export interface UpdateEventDto {
   time_from?: string;
   time_to?: string;
   location?: string;
-  location_coords?: {
-    lat: number;
-    lng: number;
-  };
+  location_coords?: { lat: number; lng: number };
   total_seats?: number;
   price_details?: PriceCategory[];
   is_active?: boolean;
@@ -287,7 +255,103 @@ export interface UpdateEventDto {
 }
 
 // ==========================================================
-// API RESPONSE TYPES
+// EVENT BOOKING TYPES  ← NEW
+// ==========================================================
+
+export type EventBookingStatus =
+  | "pending_payment"
+  | "paid"
+  | "confirmed"
+  | "cancelled"
+  | "refunded";
+
+/**
+ * Shape of a document from the event_bookings MongoDB collection.
+ * Mirrors _insert_booking_to_db() fields + check-in fields.
+ */
+export interface EventBooking {
+  _id: string;
+  event_id: string;
+  event_title: string;
+  price_category_name: string;
+  price_category_price: number;
+  base_amount: number;                   // In smallest unit (paise/paisa)
+  base_currency: string;                 // "INR" | "NPR"
+
+  name: string;
+  email: string;
+  phone: string;
+  phone_country?: string;
+  message?: string;
+
+  status: EventBookingStatus;
+  payment_status?: string;
+  payment_provider?: "razorpay" | "khalti" | null;
+  payment_order_id?: string | null;
+  payment_pidx?: string | null;
+  payment_id?: string | null;
+  payment_method?: string | null;
+  payment_completed_at?: string | null;
+
+  ticket_code?: string | null;
+
+  checked_in: boolean;
+  checked_in_at?: string | null;
+  checked_in_by?: string | null;
+
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+
+  created_at: string;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+/**
+ * Payment info returned alongside a booking in admin detail endpoints.
+ */
+export interface EventPaymentInfo {
+  provider: "razorpay" | "khalti" | null;
+  order_id?: string | null;
+  payment_id?: string | null;
+  pidx?: string | null;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  verified_via_api?: boolean;
+}
+
+// ==========================================================
+// EVENT BOOKING API RESPONSE TYPES  ← NEW
+// ==========================================================
+
+export interface EventBookingDetailResponse {
+  success: boolean;
+  booking: EventBooking;
+  payment_info?: EventPaymentInfo | null;
+}
+
+export interface EventBookingsListResponse {
+  success: boolean;
+  bookings: EventBooking[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface EventBookingStatsResponse {
+  success: boolean;
+  stats: {
+    total: number;
+    by_status: Record<string, number>;
+    checked_in: number;
+    total_revenue_base_units?: number;
+  };
+}
+
+// ==========================================================
+// API RESPONSE TYPES (service bookings)
 // ==========================================================
 
 export interface BookingSearchResponse {
@@ -338,19 +402,8 @@ export interface PaymentAnalytics {
   method_breakdown: Record<string, number>;
   status_breakdown: Record<string, number>;
   average_transaction: number;
-  // Per-provider breakdown (multi-provider analytics)
-  razorpay?: {
-    total_revenue: number;
-    total_transactions: number;
-    net_revenue: number;
-    currency: string;
-  };
-  khalti?: {
-    total_revenue: number;
-    total_transactions: number;
-    net_revenue: number;
-    currency: string;
-  };
+  razorpay?: { total_revenue: number; total_transactions: number; net_revenue: number; currency: string };
+  khalti?: { total_revenue: number; total_transactions: number; net_revenue: number; currency: string };
 }
 
 export interface PaymentAnalyticsResponse {
@@ -363,13 +416,13 @@ export interface PaymentAnalyticsResponse {
 // ==========================================================
 
 export interface ApprovalFormData {
-  payment_amount: number; // in paise / paisa
+  payment_amount: number;
 }
 
 export interface RefundFormData {
-  amount?: number;   // in paise / paisa, undefined = full refund
+  amount?: number;
   reason: string;
-  mobile?: string;   // Khalti bank refund: requires mobile number
+  mobile?: string;
 }
 
 export interface CancelFormData {

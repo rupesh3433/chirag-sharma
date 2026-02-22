@@ -24,6 +24,7 @@ import Knowledge from "./pages/Knowledge";
 import Events from "./pages/Events";
 import EventCreate from "./pages/EventCreate";
 import EventDetail from "./pages/EventDetail";
+import EventBookings from "./pages/EventBookings";  // ← NEW
 
 import NotFound from "./pages/NotFound";
 
@@ -60,6 +61,7 @@ const AdminApp = () => (
             {/* Event Routes */}
             <Route path="events" element={<Events />} />
             <Route path="events/create" element={<EventCreate />} />
+            <Route path="events/bookings" element={<EventBookings />} />   {/* ← NEW — must be before :id */}
             <Route path="events/:id" element={<EventDetail />} />
             <Route path="events/edit/:id" element={<EventCreate />} />
           </Route>

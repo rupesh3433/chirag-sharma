@@ -17,6 +17,10 @@ import {
   Event,
   EventStatus,
   LoginResponse,
+  EventBooking,
+  EventBookingsListResponse,
+  EventBookingDetailResponse,
+  EventBookingStatsResponse,
 } from '@admin/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -368,3 +372,114 @@ export const eventsApi = {
       `/admin/events/${eventId}/gallery/${imageIndex}`
     ),
 };
+
+/* =======================================================
+   EVENT BOOKINGS API
+======================================================= */
+export const eventBookingsApi = {
+  /**
+   * Get all event bookings with optional filtering
+   * @param params - Query parameters for filtering (status, event_id, page, limit, search)
+   */
+  getAll: (params?: {
+    status?: string;
+    event_id?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) =>
+    api.get<EventBookingsListResponse>('/admin/events/bookings', { params }),
+
+  /**
+   * Get booking by ID with payment information
+   * @param id - Booking ID
+   */
+  getById: (id: string) =>
+    api.get<EventBookingDetailResponse>(`/admin/events/bookings/${id}`),
+
+  /**
+   * Get booking by ticket code (for verification)
+   * @param ticketCode - Ticket code to lookup
+   */
+  getByTicketCode: (ticketCode: string) =>
+    api.get<{ success: boolean; booking: EventBooking }>(
+      `/admin/events/bookings/by-ticket/${ticketCode}`
+    ),
+
+  /**
+   * Get event booking statistics
+   * @param eventId - Optional event ID to filter stats
+   */
+  getStats: (eventId?: string) =>
+    api.get<EventBookingStatsResponse>('/admin/events/bookings/stats', {
+      params: eventId ? { event_id: eventId } : undefined,
+    }),
+
+  /**
+   * Check in attendee at event
+   * @param id - Booking ID
+   */
+  checkIn: (id: string) =>
+    api.post<{
+      success: boolean;
+      message: string;
+      booking_id: string;
+      attendee_name: string;
+      event_title: string;
+      price_category: string;
+      ticket_code?: string;
+      checked_in_at: string;
+      already_checked_in: boolean;
+    }>(`/admin/events/bookings/${id}/check-in`),
+
+  /**
+   * Update booking status (cancel, confirm, refund)
+   * @param id - Booking ID
+   * @param data - Update data with status and optional cancellation reason
+   */
+  updateStatus: (
+    id: string,
+    data: {
+      status: string;
+      cancellation_reason?: string;
+    }
+  ) =>
+    api.patch<{
+      success: boolean;
+      message: string;
+      booking_id: string;
+      new_status: string;
+    }>(`/admin/events/bookings/${id}/status`, data),
+
+  /**
+   * Verify ticket by code (alternative check-in method)
+   * @param id - Booking ID
+   * @param ticketCode - Ticket code to verify
+   */
+  verifyTicket: (id: string, ticketCode: string) =>
+    api.post<{
+      success: boolean;
+      message: string;
+      booking_id: string;
+      attendee_name: string;
+      event_title: string;
+      price_category: string;
+      ticket_code: string;
+      checked_in_at: string;
+      already_checked_in: boolean;
+    }>(`/admin/events/bookings/${id}/verify-ticket`, null, {
+      params: { ticket_code: ticketCode },
+    }),
+};
+
+// /* =======================================================
+//    EXPORTS--- prompt for AI:  remove individual exports from above and use this common exports
+// ======================================================= */
+// export {
+//   authApi,
+//   bookingsApi,
+//   analyticsApi,
+//   knowledgeApi,
+//   eventsApi,
+//   eventBookingsApi,
+// };
