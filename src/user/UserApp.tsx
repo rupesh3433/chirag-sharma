@@ -24,6 +24,7 @@ import Chatbot from "./components/chatbot/Chatbot";
 import ScrollToTop from "./components/ScrollToTop";
 import UserLayout from "./components/layout/UserLayout";
 import EventsPage from "./pages/EventsPage";
+import KhaltiEventCallbackPage from "./pages/KhaltiEventCallbackPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,11 @@ const UserApp = () => {
                 Configure KHALTI_RETURN_URL in backend as: {FRONTEND_URL}/payment/khalti-callback
             */}
             <Route path="payment/khalti-callback" element={<KhaltiCallbackPage />} />
+
+            <Route
+          path="/payment/khalti-event-callback"
+          element={<KhaltiEventCallbackPage />}
+        />
 
             <Route path="booking-status/:bookingId" element={<BookingStatusPage />} />
             <Route path="about" element={<About />} />
