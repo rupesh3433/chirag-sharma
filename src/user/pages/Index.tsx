@@ -12,7 +12,7 @@ import Hero from "../components/indexComponents/Hero";
 import EventsSection from "../components/indexComponents/EventsSection";
 import Testimonials from "../components/indexComponents/Testimonials";
 
-import SocialMediaPage from "../components/portfolio/SocialMedia";
+import SocialMediaPage from "../components/socialmedia/SocialMedia";
 import ServicesSection from "../components/indexComponents/ServicesSection";
 
 const Index = () => {

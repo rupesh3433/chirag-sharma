@@ -7,6 +7,7 @@ import {
   Sparkles,
   BookOpen,
   CalendarDays,
+  LayoutGrid,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -27,10 +28,11 @@ import {
 } from '@shared/components/ui/tooltip';
 
 const menuItems = [
-  { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
-  { title: 'Bookings', url: '/admin/bookings', icon: Calendar },
-  { title: 'Events', url: '/admin/events', icon: CalendarDays },
-  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Dashboard',    url: '/admin/dashboard',  icon: LayoutDashboard },
+  { title: 'Bookings',     url: '/admin/bookings',   icon: Calendar },
+  { title: 'Events',       url: '/admin/events',     icon: CalendarDays },
+  { title: 'Analytics',    url: '/admin/analytics',  icon: BarChart3 },
+  { title: 'Portfolio',    url: '/admin/portfolio',  icon: LayoutGrid },
   { title: 'Knowledge Base', url: '/admin/knowledge', icon: BookOpen },
 ];
 
