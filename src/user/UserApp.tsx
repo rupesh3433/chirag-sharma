@@ -25,6 +25,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import UserLayout from "./components/layout/UserLayout";
 import EventsPage from "./pages/EventsPage";
 import KhaltiEventCallbackPage from "./pages/KhaltiEventCallbackPage";
+import PublicLiveTracker from "@/shared/components/PublicLiveTracker";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,10 @@ const UserApp = () => {
 
         <ScrollToTop />
         <Chatbot />
+
+        {/* ✅ MOUNT IT HERE */}
+        <PublicLiveTracker />
+
 
         <Routes>
           <Route element={<UserLayout />}>

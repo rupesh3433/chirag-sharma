@@ -1,5 +1,6 @@
 // ================================================================
 // OverviewTab.tsx — High-level summary with per-tab loader/timeout
+// Admin uses REST only for live count — no WebSocket.
 // ================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -40,44 +41,6 @@ function useWithTimeout<T>(queryResult: { data: T | undefined; isLoading: boolea
 }
 
 export function OverviewTab() {
-
-  const WS_BASE =
-    (import.meta.env.VITE_WS_URL ??
-      import.meta.env.VITE_API_URL?.replace(/^http/, "ws") ??
-      "") as string;
-
-  const [liveCount, setLiveCount] = useState<number>(0);
-  const wsRef = useRef<WebSocket | null>(null);
-  const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    let destroyed = false;
-    const clearPing = () => { if (pingRef.current) { clearInterval(pingRef.current); pingRef.current = null; } };
-    const clearReconnect = () => { if (reconnectTimeoutRef.current) { clearTimeout(reconnectTimeoutRef.current); reconnectTimeoutRef.current = null; } };
-    const connect = () => {
-      if (destroyed || !WS_BASE) return;
-      try {
-        const ws = new WebSocket(`${WS_BASE}/ws/live`);
-        wsRef.current = ws;
-        ws.onopen = () => {
-          clearPing();
-          pingRef.current = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send("ping"); }, 15000);
-        };
-        ws.onmessage = (event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data && data.type === "live_count" && typeof data.count === "number") setLiveCount(data.count);
-          } catch { return; }
-        };
-        ws.onclose = () => { clearPing(); wsRef.current = null; if (!destroyed) { clearReconnect(); reconnectTimeoutRef.current = setTimeout(connect, 3000); } };
-        ws.onerror = () => ws.close();
-      } catch { if (!destroyed) { clearReconnect(); reconnectTimeoutRef.current = setTimeout(connect, 5000); } }
-    };
-    connect();
-    return () => { destroyed = true; clearPing(); clearReconnect(); if (wsRef.current) { wsRef.current.close(); wsRef.current = null; } };
-  }, [WS_BASE]);
-
   const ovQ = useQuery({
     queryKey: ["analytics-overview"],
     queryFn: () => api.get("/admin/analytics/overview").then((r) => r.data),
@@ -97,18 +60,27 @@ export function OverviewTab() {
     queryFn: () => api.get("/admin/analytics/counter-stats").then((r) => r.data),
     refetchInterval: 60000,
   });
+  // Separate query for live count — polls every 30s
+  const liveQ = useQuery({
+    queryKey: ["analytics-live-count"],
+    queryFn: () => api.get("/admin/analytics/live-viewers").then((r) => r.data),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+  });
 
-  // Use the slowest of the four queries to gate the shell
   const { loading: ovL, timedOut: ovTO } = useWithTimeout(ovQ);
   const { loading: vdL, timedOut: vdTO } = useWithTimeout(vdQ);
 
-  const loading   = ovL || vdL;
-  const timedOut  = (ovTO || vdTO) && !ovQ.data && !vdQ.data;
+  const loading  = ovL || vdL;
+  const timedOut = (ovTO || vdTO) && !ovQ.data && !vdQ.data;
 
   const ov = ovQ.data as any;
   const vd = vdQ.data as any;
   const bm = bmQ.data as any;
   const cs = csQ.data as any;
+
+  // Live count from REST — no WebSocket in admin
+  const liveCount = liveQ.data?.live_viewers ?? 0;
 
   const ch  = useChartH(290, 230, 170);
   const chS = useChartH(250, 200, 160);
@@ -128,8 +100,8 @@ export function OverviewTab() {
   ].filter((d) => d.value > 0);
 
   const evtPie = [
-    { name: "Paid",       value: ov?.paid_event_bookings    ?? 0 },
-    { name: "Checked In", value: ov?.checked_in_count       ?? 0 },
+    { name: "Paid",       value: ov?.paid_event_bookings      ?? 0 },
+    { name: "Checked In", value: ov?.checked_in_count         ?? 0 },
     { name: "Cancelled",  value: ov?.cancelled_event_bookings ?? 0 },
   ].filter((d) => d.value > 0);
 
@@ -147,8 +119,12 @@ export function OverviewTab() {
               <div className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: P.teal }} />
               <span style={{ fontSize: 9.5, fontWeight: 800, color: P.teal, textTransform: "uppercase", letterSpacing: ".1em" }}>Live Now</span>
             </div>
-            <p className="mono num-hero" style={{ fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 6px" }}>{liveCount}</p>
-            <p style={{ fontSize: 12, color: "#6B7280" }}>Verified active viewers</p>
+            {liveQ.isLoading ? (
+              <Skel h={48} w={70} />
+            ) : (
+              <p className="mono num-hero" style={{ fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 6px" }}>{liveCount}</p>
+            )}
+            <p style={{ fontSize: 12, color: "#6B7280" }}>Qualified active viewers</p>
           </div>
 
           {[
@@ -177,9 +153,9 @@ export function OverviewTab() {
         <SectionLabel color={P.indigo}>Atomic Visit Counters</SectionLabel>
         <div className="rg g4">
           {[
-            { lbl: "Total (All Time)", v: cs?.total     ?? 0, color: P.indigo, icon: Globe    },
-            { lbl: "Today (UTC)",      v: cs?.today     ?? 0, color: P.teal,   icon: Calendar },
-            { lbl: "This Hour (UTC)",  v: cs?.this_hour ?? 0, color: P.sky,    icon: Clock    },
+            { lbl: "Total (All Time)", v: cs?.total     ?? 0, color: P.indigo, icon: Globe      },
+            { lbl: "Today (UTC)",      v: cs?.today     ?? 0, color: P.teal,   icon: Calendar   },
+            { lbl: "This Hour (UTC)",  v: cs?.this_hour ?? 0, color: P.sky,    icon: Clock      },
             { lbl: "Last 24 Hours",    v: cs?.last_24h  ?? 0, color: P.violet, icon: TrendingUp },
           ].map(({ lbl, v, color, icon: I }) => (
             <div key={lbl} className="stat-card" style={{ "--stripe": color } as any}>
@@ -309,6 +285,7 @@ export function OverviewTab() {
             <DonutWithCenter data={evtPie} total={totalEvt} totalLabel="Events" colors={[P.teal, P.indigo, P.coral]} />
           </ChartCard>
         )}
+
       </div>
     </TabShell>
   );

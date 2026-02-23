@@ -1,70 +1,17 @@
 // ================================================================
-// LiveViewersPanel.tsx — WebSocket-based live viewer panel
-// Backend: WebSocket /ws/live → { type: "live_count", count: N }
-//          REST fallback: GET /admin/analytics/live-viewers
+// LiveViewersPanel.tsx — REST-only live viewer panel
+// Backend: GET /admin/analytics/live-viewers  (polls every 30s)
+//          GET /admin/analytics/live-hourly   (polls every 30s)
+//
+// Admin uses REST ONLY. WebSocket is for public visitors only.
 // ================================================================
 
-import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Radio, Users, MousePointer2, RefreshCw } from "lucide-react";
 import api from "../../services/api";
 import { P, CHART_COLORS, fmtDur } from "./constants";
-import { TipIcon, Empty } from "./ui";
+import { TipIcon, Empty, Skel } from "./ui";
 
-const WS_BASE = (import.meta.env.VITE_WS_URL ?? import.meta.env.VITE_API_URL?.replace(/^http/, "ws") ?? "") as string;
-
-// ── WebSocket live count hook ─────────────────────────────────────
-function useLiveCount(fallback: number) {
-  const [count, setCount] = useState<number | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    let dead = false;
-
-    function connect() {
-      if (dead) return;
-      try {
-        const ws = new WebSocket(`${WS_BASE}/ws/live`);
-        wsRef.current = ws;
-
-        ws.onmessage = (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            if (data.type === "live_count") setCount(data.count);
-          } catch {}
-        };
-
-        ws.onopen = () => {
-          pingRef.current = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) ws.send("ping");
-          }, 15_000);
-        };
-
-        ws.onclose = () => {
-          if (pingRef.current) clearInterval(pingRef.current);
-          if (!dead) setTimeout(connect, 3_000);
-        };
-
-        ws.onerror = () => ws.close();
-      } catch {
-        if (!dead) setTimeout(connect, 5_000);
-      }
-    }
-
-    connect();
-
-    return () => {
-      dead = true;
-      if (pingRef.current) clearInterval(pingRef.current);
-      wsRef.current?.close();
-    };
-  }, []);
-
-  return count !== null ? count : fallback;
-}
-
-// ── Main panel ───────────────────────────────────────────────────
 export function LiveViewersPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["analytics-live"],
@@ -73,12 +20,20 @@ export function LiveViewersPanel() {
     refetchIntervalInBackground: true,
   });
 
-  const restLive = data?.live_viewers ?? 0;
-  const live = useLiveCount(restLive);
-  const hour = data?.unique_last_hour ?? 0;
-  const pages = data?.live_pages ?? [];
-  const lat = data?.latest_page;
-  const latD = data?.latest_duration ?? 0;
+  const { data: hourlyData } = useQuery({
+    queryKey: ["analytics-live-hourly"],
+    queryFn: () => api.get("/admin/analytics/live-hourly").then((r) => r.data),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+  });
+
+  // REST-based live count only — no WebSocket in admin
+  const live           = data?.live_viewers     ?? 0;
+  const hour           = data?.unique_last_hour ?? 0;
+  const pages          = data?.live_pages       ?? [];
+  const lat            = data?.latest_page;
+  const latD           = data?.latest_duration  ?? 0;
+  const uniqueThisHour = hourlyData?.unique_this_hour ?? hour;
 
   return (
     <div className="rg g-live">
@@ -90,10 +45,9 @@ export function LiveViewersPanel() {
           <span style={{ fontSize: 9.5, fontWeight: 800, color: P.teal, textTransform: "uppercase", letterSpacing: ".1em" }}>
             Live Right Now
           </span>
-          <TipIcon text="Real-time via WebSocket. Updates instantly when viewers join/leave." />
+          <TipIcon text="Sessions qualified via WebSocket (≥ 8s connected). Multi-tab safe — same visitor = 1 count. Admin reads via REST, not WebSocket." />
         </div>
 
-        {/* Icon — absolute only on wider screens, inline on mobile */}
         <div
           className="live-stat-icon"
           style={{
@@ -106,11 +60,15 @@ export function LiveViewersPanel() {
           <Radio style={{ width: 17, height: 17, color: P.teal }} />
         </div>
 
-        <p className="mono num-live countup" style={{ fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 7px" }}>
-          {live}
-        </p>
+        {isLoading ? (
+          <div className="skel" style={{ height: 52, width: 70 }} />
+        ) : (
+          <p className="mono num-live countup" style={{ fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 7px" }}>
+            {live}
+          </p>
+        )}
         <p style={{ fontSize: 12.5, color: "#6B7280", marginBottom: 16 }}>
-          Real-time WebSocket viewers
+          Qualified sessions (≥ 8s connected)
         </p>
 
         {lat ? (
@@ -134,13 +92,13 @@ export function LiveViewersPanel() {
             borderRadius: 11, border: "1px solid #E5E9F4",
           }}>
             <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0 }}>
-              No active sessions. Updates in real-time.
+              No active sessions. Polls every 30s.
             </p>
           </div>
         ) : null}
 
         <p style={{ fontSize: 9.5, color: "#C4CCDF", marginTop: 12, display: "flex", alignItems: "center", gap: 5 }}>
-          <RefreshCw style={{ width: 9, height: 9 }} /> WebSocket · instant updates
+          <RefreshCw style={{ width: 9, height: 9 }} /> REST poll · 30s refresh
         </p>
       </div>
 
@@ -148,9 +106,9 @@ export function LiveViewersPanel() {
       <div className="stat-card" style={{ "--stripe": P.sky } as any}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
           <span style={{ fontSize: 9.5, fontWeight: 800, color: P.sky, textTransform: "uppercase", letterSpacing: ".08em" }}>
-            Unique Sessions · Rolling 60 Min
+            Unique Sessions · This Hour
           </span>
-          <TipIcon text="Distinct sessions started in last 60 min. Returning after 30 min gap = new session." />
+          <TipIcon text="Unique sessions that qualified (≥ 8s) in the current UTC hour. Stored in live_hourly MongoDB collection. Reconnect-safe — same session not double-counted." />
         </div>
 
         <div
@@ -169,11 +127,11 @@ export function LiveViewersPanel() {
           <div className="skel" style={{ height: 58, width: 70 }} />
         ) : (
           <p className="mono num-live countup" style={{ fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 7px" }}>
-            {hour}
+            {uniqueThisHour}
           </p>
         )}
         <p style={{ fontSize: 12.5, color: "#6B7280", marginBottom: 16 }}>
-          Unique sessions in last hour
+          Unique qualified sessions this hour
         </p>
 
         <div style={{
@@ -181,9 +139,9 @@ export function LiveViewersPanel() {
           borderRadius: 11, border: "1px solid #E5E9F4",
         }}>
           {[
-            { dot: P.sky,    text: "Same visitor counted once per session" },
-            { dot: P.teal,   text: "Returns after 30 min = new session" },
-            { dot: P.violet, text: "Weekly/monthly allow re-count" },
+            { dot: P.sky,    text: "Must stay ≥ 8 seconds to qualify" },
+            { dot: P.teal,   text: "Multi-tab: same session = 1 count" },
+            { dot: P.violet, text: "Reconnect within hour = not re-counted" },
           ].map(({ dot, text }) => (
             <div key={text} className="live-info-row">
               <span style={{
@@ -242,6 +200,7 @@ export function LiveViewersPanel() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
