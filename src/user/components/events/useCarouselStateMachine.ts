@@ -1,3 +1,5 @@
+// useCarouselStateMachine.ts
+
 import { useReducer, useEffect, useCallback } from "react";
 
 type DeviceType = "mobile" | "desktop";

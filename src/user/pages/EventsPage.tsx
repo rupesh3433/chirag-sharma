@@ -1,3 +1,5 @@
+// EventsPage.tsx
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Footer from "../components/Footer";

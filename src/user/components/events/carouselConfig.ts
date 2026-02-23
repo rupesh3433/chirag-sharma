@@ -1,3 +1,5 @@
+// carouselConfig.ts
+
 export const BREAKPOINTS = {
     mobile: 768,
     tablet: 1024,
@@ -21,7 +23,7 @@ export const BREAKPOINTS = {
   export const VERTICAL_OFFSET = {
     mobile: -30,
     tablet: -70,
-    laptop: -60,
+    laptop: -90,
     desktop: -80,
   } as const;
   
