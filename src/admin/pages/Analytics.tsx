@@ -7,16 +7,40 @@ import { BarChart2, Users, Calendar, Ticket } from "lucide-react";
 import { useSidebar } from "@shared/components/ui/sidebar";
 import { InjectCSS } from "@admin/components/analytics/ui";
 import { P } from "@admin/components/analytics/constants";
-import { OverviewTab }        from "@admin/components/analytics/OverviewTab";
-import { VisitorsTab }        from "@admin/components/analytics/VisitorsTab";
+import { OverviewTab } from "@admin/components/analytics/OverviewTab";
+import { VisitorsTab } from "@admin/components/analytics/VisitorsTab";
 import { ServiceBookingsTab } from "@admin/components/analytics/ServiceBookingsTab";
-import { EventBookingsTab }   from "@admin/components/analytics/EventBookingsTab";
+import { EventBookingsTab } from "@admin/components/analytics/EventBookingsTab";
 
 const TABS = [
-  { key: "overview",  label: "Overview",        short: "Overview",  icon: BarChart2, color: P.coral  },
-  { key: "visitors",  label: "Visitors",         short: "Visitors",  icon: Users,     color: P.teal   },
-  { key: "services",  label: "Service Bookings", short: "Services",  icon: Calendar,  color: P.coral  },
-  { key: "events",    label: "Event Bookings",   short: "Events",    icon: Ticket,    color: P.violet },
+  {
+    key: "overview",
+    label: "Overview",
+    short: "Overview",
+    icon: BarChart2,
+    color: P.coral,
+  },
+  {
+    key: "visitors",
+    label: "Visitors",
+    short: "Visitors",
+    icon: Users,
+    color: P.teal,
+  },
+  {
+    key: "services",
+    label: "Service Bookings",
+    short: "Services",
+    icon: Calendar,
+    color: P.coral,
+  },
+  {
+    key: "events",
+    label: "Event Bookings",
+    short: "Events",
+    icon: Ticket,
+    color: P.violet,
+  },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -48,8 +72,8 @@ const AnalyticsPage = () => {
   const sidebarLeft = isMobile
     ? "0px"
     : collapsed
-      ? "var(--sidebar-width-icon, 3rem)"
-      : "var(--sidebar-width, 16rem)";
+    ? "var(--sidebar-width-icon, 3rem)"
+    : "var(--sidebar-width, 16rem)";
 
   return (
     <>
@@ -149,47 +173,78 @@ const AnalyticsPage = () => {
         {/* ── Fixed analytics bar ── */}
         <div className="an-fixed" ref={barRef}>
           <div className="an-wrap">
-
             <div className="an-title-row">
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h1
                   className="an-title-h1"
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
-                    fontWeight: 700, color: "#111827", margin: 0,
-                    fontStyle: "italic", fontSize: "clamp(14px, 2.5vw, 24px)",
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    fontWeight: 700,
+                    color: "#111827",
+                    margin: 0,
+                    fontStyle: "italic",
+                    fontSize: "clamp(14px, 2.5vw, 24px)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   Analytics
-                  <span style={{
-                    fontStyle: "normal", fontFamily: "'DM Sans', system-ui",
-                    fontWeight: 800, color: "#C4CCDF", marginLeft: 8, fontSize: "0.7em",
-                  }}>
+                  <span
+                    style={{
+                      fontStyle: "normal",
+                      fontFamily: "'DM Sans', system-ui",
+                      fontWeight: 800,
+                      color: "#C4CCDF",
+                      marginLeft: 8,
+                      fontSize: "0.7em",
+                    }}
+                  >
                     / Dashboard
                   </span>
                 </h1>
                 <p
                   className="an-title-sub"
                   style={{
-                    color: "#9CA3AF", margin: "2px 0 0", fontWeight: 500,
+                    color: "#9CA3AF",
+                    margin: "2px 0 0",
+                    fontWeight: 500,
                     fontSize: "clamp(9px, 1.3vw, 11px)",
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
-                  WebSocket live · Atomic counters · Session analytics · Bounce-filtered
+                  WebSocket live · Atomic counters · Session analytics ·
+                  Bounce-filtered
                 </p>
               </div>
 
               <div
                 className="an-badge"
-                style={{ background: `${P.teal}0E`, border: `1.5px solid ${P.teal}30` }}
+                style={{
+                  background: `${P.teal}0E`,
+                  border: `1.5px solid ${P.teal}30`,
+                }}
               >
-                <div className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: P.teal }} />
-                <span style={{
-                  fontSize: "clamp(8px, 1.2vw, 10.5px)", fontWeight: 800,
-                  color: P.teal, letterSpacing: ".08em", textTransform: "uppercase",
-                }}>
+                <div
+                  className="live-dot"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: P.teal,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: "clamp(8px, 1.2vw, 10.5px)",
+                    fontWeight: 800,
+                    color: P.teal,
+                    letterSpacing: ".08em",
+                    textTransform: "uppercase",
+                  }}
+                >
                   Live · Auto-refreshes
                 </span>
               </div>
@@ -222,10 +277,10 @@ const AnalyticsPage = () => {
         {/* Tab content */}
         <div className="an-content-clip">
           <div className="an-content">
-            {tab === "overview"  && <OverviewTab />}
-            {tab === "visitors"  && <VisitorsTab />}
-            {tab === "services"  && <ServiceBookingsTab />}
-            {tab === "events"    && <EventBookingsTab />}
+            {tab === "overview" && <OverviewTab />}
+            {tab === "visitors" && <VisitorsTab />}
+            {tab === "services" && <ServiceBookingsTab />}
+            {tab === "events" && <EventBookingsTab />}
           </div>
         </div>
 
